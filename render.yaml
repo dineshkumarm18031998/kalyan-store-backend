@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: kalyan-store-backend-1
+    runtime: node
+    buildCommand: npm install
+    startCommand: node src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false    # Set in Render dashboard — Supabase Transaction Pooler URL port 6543
+      - key: JWT_SECRET
+        sync: false    # Set in Render dashboard — kalyan2024secret or your secret
