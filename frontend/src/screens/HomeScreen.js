@@ -46,26 +46,17 @@ export default function HomeScreen({ navigation }) {
   const d = todayISO();
   const validBookings = bookings.filter(b => !b.isDeleted);
   
-  // 1. Today's Collection
-  const todayCol = validBookings.filter(b => b.date === d).reduce((s, b) => s + (b.paidAmount || 0) + (b.additionalPayment || 0), 0);
+  // 1. Today's Collection (Rented Amount Today)
+  const todayCol = validBookings.filter(b => b.date === d).reduce((s, b) => s + (b.totalAmount || 0), 0);
   
-  // 2. Rental Revenue
+  // 2. Rental Revenue (Total Rented Amount)
   const totalRev = validBookings.reduce((s, b) => s + (b.totalAmount || 0), 0);
   
-  // 3. Pending Collection
-  const pending = validBookings.reduce((s, b) => {
-    const received = (b.paidAmount || 0) + (b.additionalPayment || 0);
-    const bal = (b.totalAmount || 0) - received;
-    return s + Math.max(bal, 0);
-  }, 0);
+  // 3. Pending Collection (Unpaid Orders)
+  const pending = validBookings.filter(b => !b.paid).reduce((s, b) => s + (b.totalAmount || 0), 0);
   
-  // 4. Refund Pending
-  const refundPend = validBookings.reduce((s, b) => {
-    if (b.advanceReturned) return s;
-    const received = (b.paidAmount || 0) + (b.additionalPayment || 0);
-    const ref = received - (b.totalAmount || 0);
-    return s + Math.max(ref, 0);
-  }, 0);
+  // 4. Damage Collection
+  const dmgCol = validBookings.reduce((s, b) => (b.damages || []).reduce((ss, x) => ss + x.qty * x.rate, s), 0);
 
   const getRented = (name) => validBookings.filter(b => !b.returned).reduce((s, b) => {
     const it = (b.items || []).find(i => i.name === name);
@@ -78,7 +69,7 @@ export default function HomeScreen({ navigation }) {
     { l: t.todayCol, v: rupee(todayCol), c: C.teal, bg: C.tealLight, ic: '💰', f: 'today' },
     { l: t.totalRev, v: rupee(totalRev), c: C.blue, bg: C.blueLight, ic: '📊', f: 'all' },
     { l: t.pending, v: rupee(pending), c: C.red, bg: C.redLight, ic: '⏳', f: 'pending' },
-    { l: t.refundPend || 'Refund Pending', v: rupee(refundPend), c: C.orange, bg: C.orangeLight, ic: '💸', f: 'refund' },
+    { l: t.dmgCol || 'Damage Collection', v: rupee(dmgCol), c: C.orange, bg: C.orangeLight, ic: '⚠️', f: 'damage' },
   ];
 
   return (
