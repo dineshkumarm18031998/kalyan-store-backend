@@ -81,7 +81,7 @@ router.post('/', auth, async (req, res) => {
 // Update booking (return date, payment, etc)
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { returnDate, totalDays, subtotal, discount, totalAmount, paid, paidAmount, returned, actualReturnDate, isVip, generatedBy, advanceReturned } = req.body;
+    const { returnDate, totalDays, subtotal, discount, totalAmount, paid, paidAmount, additionalPayment, returned, actualReturnDate, isVip, generatedBy, advanceReturned } = req.body;
 
     const existing = await prisma.booking.findUnique({ where: { id: req.params.id } });
     if (!existing || existing.storeId !== req.storeId) {
@@ -98,6 +98,7 @@ router.put('/:id', auth, async (req, res) => {
         ...(totalAmount !== undefined && { totalAmount: parseFloat(totalAmount) }),
         ...(paid !== undefined && { paid }),
         ...(paidAmount !== undefined && { paidAmount: parseFloat(paidAmount) }),
+        ...(additionalPayment !== undefined && { additionalPayment: parseFloat(additionalPayment) }),
         ...(returned !== undefined && { returned }),
         ...(actualReturnDate !== undefined && { actualReturnDate }),
         ...(isVip !== undefined && { isVip }),

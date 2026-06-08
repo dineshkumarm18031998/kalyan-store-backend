@@ -60,10 +60,20 @@ export default function OrderDetailScreen({ route, navigation }) {
   const disc = vip ? Math.round(sub * 0.5) : (+cdisc || 0);
   const total = Math.max(0, sub - disc) + dmgAmt;
   const adv = b.paidAmount || 0;
-  const rem = total - adv;
+  const addl = b.additionalPayment || 0;
+  const totalReceived = adv + addl;
+  const diff = adv - total; // As per CASE 2: difference = advancePaid - totalAmount
+  
+  // Actually the formula said: if difference > 0, refund = diff, balance = 0.
+  // Wait, does additionalPayment count towards difference? 
+  // "Formula: difference = advancePaid - totalAmount"
+  // If they don't want additionalPayment in the difference formula... wait, additional payment IS money received.
+  // Let's use totalReceived for balance calculations.
+  const rem = total - totalReceived;
   const balDue = Math.max(rem, 0);
   const refDue = Math.max(-rem, 0);
-  const isPaid = balDue <= 0 && total > 0; // It's paid only if nothing is owed
+  const isPaid = balDue <= 0 && total > 0; // Or just balDue <= 0
+
 
   const save = async (extra = {}) => {
     try {
@@ -80,17 +90,20 @@ export default function OrderDetailScreen({ route, navigation }) {
   const handleUpdateAdv = () => {
     Alert.prompt(
       "Update Payment",
-      "Enter total amount received so far:",
+      "Enter additional payment received (excluding advance):",
       [
         { text: "Cancel", style: "cancel" },
         { text: "Save", onPress: async (val) => {
             const v = parseFloat(val);
-            if (!isNaN(v)) await save({ paidAmount: v, paid: v >= total });
+            if (!isNaN(v)) {
+              const newBal = total - (adv + v);
+              await save({ additionalPayment: v, paid: newBal <= 0 });
+            }
           }
         }
       ],
       "plain-text",
-      String(adv),
+      String(addl),
       "number-pad"
     );
   };
@@ -135,8 +148,17 @@ export default function OrderDetailScreen({ route, navigation }) {
     if ((b.damages || []).length) { txt += `\n*Damages:*\n`; b.damages.forEach(x => { txt += `  ⚠️ ${x.product} × ${x.qty} = ${rupee(x.qty * x.rate)}\n`; }); }
     if (disc > 0) txt += `\n💸 Discount: -${rupee(disc)}\n`;
     txt += `\n${'━'.repeat(24)}\n💰 *TOTAL: ${rupee(total)}*\n`;
-    const balTxt = refDue > 0 ? `Refund Due / திருப்பி தரவேண்டியது: ${rupee(refDue)}` : `Balance Due: ${rupee(balDue)}`;
-    if (adv > 0) txt += `💵 Advance Paid: -${rupee(adv)}\n🔖 ${balTxt}\n`;
+    
+    if (adv > 0) txt += `💵 Advance Paid: -${rupee(adv)}\n`;
+    if (addl > 0) txt += `💵 Additional Paid: -${rupee(addl)}\n`;
+    
+    if (adv > 0) {
+      if (refDue > 0) txt += `🔖 Refund Amount: ${rupee(refDue)}\n`;
+      else txt += `🔖 Balance Due: ${rupee(balDue)}\n`;
+    } else {
+      txt += `🔖 Pending Amount: ${rupee(balDue)}\n`;
+    }
+    
     txt += `\n${isPaid ? '✅ PAID' : '⏳ UNPAID'}\n\n🙏 Thank you!\n_${b.generatedBy || store.ownerName}_\n🏪 ${store.storeName}`;
     return txt;
   };
@@ -144,8 +166,7 @@ export default function OrderDetailScreen({ route, navigation }) {
   const shareWA = () => Linking.openURL(`https://wa.me/${b.cMob?.replace(/\D/g, '')}?text=${encodeURIComponent(invTxt())}`);
   
   const sendReminder = () => {
-    const bal = total - (b.paidAmount || 0);
-    Linking.openURL(`https://wa.me/${b.cMob?.replace(/\D/g, '')}?text=${encodeURIComponent(`🔔 *Payment Reminder*\n\nDear ${b.cName},\nPending: *${rupee(bal)}*\n🏪 ${store.storeName}\n\nPlease settle soon. 🙏`)}`);
+    Linking.openURL(`https://wa.me/${b.cMob?.replace(/\D/g, '')}?text=${encodeURIComponent(`🔔 *Payment Reminder*\n\nDear ${b.cName},\nPending: *${rupee(balDue)}*\n🏪 ${store.storeName}\n\nPlease settle soon. 🙏`)}`);
   };
 
   const generatePDFWithAdmin = async (adminName, signatureBase64) => {
@@ -155,7 +176,7 @@ export default function OrderDetailScreen({ route, navigation }) {
     await save({ generatedBy: adminName });
     
     const d = days || 1;
-    const html = `<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui;max-width:400px;margin:auto;padding:16px;color:#1a1a2e}.h{text-align:center;border-bottom:3px solid ${C.primary};padding-bottom:12px}.h h1{color:${C.primary};font-size:22px}table{width:100%;border-collapse:collapse;margin:8px 0}th{background:#FBE9E7;color:${C.primary};font-size:10px;padding:6px;text-align:left}td{padding:6px;font-size:12px;border-bottom:1px solid #f5f5f5}td:last-child{text-align:right}.t{background:${C.primary};color:#fff;padding:12px;border-radius:8px;display:flex;justify-content:space-between;margin:8px 0;font-weight:900}</style></head><body><div class="h"><h1>${store.storeName}</h1><p style="font-size:11px;color:#888">${store.ownerName} • ${store.mobile}</p></div><p style="padding:8px 0;font-weight:700">${b.cName} • ${b.cMob}</p><p style="font-size:12px;color:#666">${fDate(b.startDate)}${b.returnDate ? ` → ${fDate(b.returnDate)}` : ''} • ${d} Days</p><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th style="text-align:right">Amt</th></tr></thead><tbody>${(b.items || []).map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${rupee(i.rate)}</td><td style="text-align:right">${rupee(i.qty * i.rate * d)}</td></tr>`).join('')}${(b.damages || []).map(x => `<tr style="color:#C62828"><td>⚠ ${x.product}</td><td>${x.qty}</td><td>${rupee(x.rate)}</td><td style="text-align:right">${rupee(x.qty * x.rate)}</td></tr>`).join('')}</tbody></table>${disc > 0 ? `<p style="text-align:right;color:#2E7D32;font-size:12px">Discount: -${rupee(disc)}</p>` : ''}<div class="t"><span>Total Bill</span><span style="font-size:20px">${rupee(total)}</span></div>${adv > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span>Advance Paid</span><span style="color:#2E7D32">-${rupee(adv)}</span></div>` : ''}${(!adv && !isPaid) ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;font-weight:800"><span>Pending Amount</span><span>${rupee(balDue)}</span></div>` : ''}${adv > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;font-weight:800"><span>${refDue > 0 ? 'Refund Due (திருப்பி தரவேண்டியது)' : 'Balance Due'}</span><span>${rupee(refDue > 0 ? refDue : balDue)}</span></div>` : ''}<p style="text-align:center;padding:6px;border-radius:6px;font-weight:700;margin-top:8px;background:${isPaid ? '#E8F5E9' : '#FFEBEE'};color:${isPaid ? '#2E7D32' : '#C62828'}">${isPaid ? '✓ PAID' : '⏳ UNPAID'}</p><p style="text-align:center;font-size:12px;color:#888;margin-top:20px">Thank you! 🙏</p><div style="text-align:right; margin-top:10px;">${signatureBase64 ? `<img src="${signatureBase64}" style="height:40px; object-fit:contain; margin-bottom:4px;" /><br/>` : ''}<span style="font-size:11px; color:#555; font-weight:bold;">${adminName || store.ownerName}</span></div></body></html>`;
+    const html = `<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui;max-width:400px;margin:auto;padding:16px;color:#1a1a2e}.h{text-align:center;border-bottom:3px solid ${C.primary};padding-bottom:12px}.h h1{color:${C.primary};font-size:22px}table{width:100%;border-collapse:collapse;margin:8px 0}th{background:#FBE9E7;color:${C.primary};font-size:10px;padding:6px;text-align:left}td{padding:6px;font-size:12px;border-bottom:1px solid #f5f5f5}td:last-child{text-align:right}.t{background:${C.primary};color:#fff;padding:12px;border-radius:8px;display:flex;justify-content:space-between;margin:8px 0;font-weight:900}</style></head><body><div class="h"><h1>${store.storeName}</h1><p style="font-size:11px;color:#888">${store.ownerName} • ${store.mobile}</p></div><p style="padding:8px 0;font-weight:700">${b.cName} • ${b.cMob}</p><p style="font-size:12px;color:#666">${fDate(b.startDate)}${b.returnDate ? ` → ${fDate(b.returnDate)}` : ''} • ${d} Days</p><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th style="text-align:right">Amt</th></tr></thead><tbody>${(b.items || []).map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${rupee(i.rate)}</td><td style="text-align:right">${rupee(i.qty * i.rate * d)}</td></tr>`).join('')}${(b.damages || []).map(x => `<tr style="color:#C62828"><td>⚠ ${x.product}</td><td>${x.qty}</td><td>${rupee(x.rate)}</td><td style="text-align:right">${rupee(x.qty * x.rate)}</td></tr>`).join('')}</tbody></table>${disc > 0 ? `<p style="text-align:right;color:#2E7D32;font-size:12px">Discount: -${rupee(disc)}</p>` : ''}<div class="t"><span>Total Bill</span><span style="font-size:20px">${rupee(total)}</span></div>${adv > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span>Advance Paid</span><span style="color:#2E7D32">-${rupee(adv)}</span></div>` : ''}${addl > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span>Additional Paid</span><span style="color:#2E7D32">-${rupee(addl)}</span></div>` : ''}${adv > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;font-weight:800"><span>${refDue > 0 ? 'Refund Amount' : 'Balance Due'}</span><span>${rupee(refDue > 0 ? refDue : balDue)}</span></div>` : `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;font-weight:800"><span>Pending Amount</span><span>${rupee(balDue)}</span></div>`}<p style="text-align:center;padding:6px;border-radius:6px;font-weight:700;margin-top:8px;background:${isPaid ? '#E8F5E9' : '#FFEBEE'};color:${isPaid ? '#2E7D32' : '#C62828'}">${isPaid ? '✓ PAID' : '⏳ UNPAID'}</p><p style="text-align:center;font-size:12px;color:#888;margin-top:20px">Thank you! 🙏</p><div style="text-align:right; margin-top:10px;">${signatureBase64 ? `<img src="${signatureBase64}" style="height:40px; object-fit:contain; margin-bottom:4px;" /><br/>` : ''}<span style="font-size:11px; color:#555; font-weight:bold;">${adminName || store.ownerName}</span></div></body></html>`;
     try { const { uri } = await Print.printToFileAsync({ html }); await Sharing.shareAsync(uri); } catch (e) {}
   };
 
@@ -255,13 +276,17 @@ export default function OrderDetailScreen({ route, navigation }) {
             {adv > 0 ? (
               <>
                 <View style={[s.billRow, { marginTop: 6 }]}><Text style={s.billTxt}>Advance Paid</Text><Text style={[s.billTxt, { color: C.green }]}>-{rupee(adv)}</Text></View>
+                {addl > 0 && <View style={s.billRow}><Text style={s.billTxt}>Additional Paid</Text><Text style={[s.billTxt, { color: C.green }]}>-{rupee(addl)}</Text></View>}
                 <View style={s.billRow}><Text style={{ fontWeight: '800', color: C.text }}>{refDue > 0 ? 'Refund Amount' : 'Balance Due'}</Text><Text style={{ fontWeight: '900', color: refDue > 0 ? C.primary : C.text }}>{rupee(refDue > 0 ? refDue : balDue)}</Text></View>
               </>
             ) : (
-              <View style={[s.billRow, { marginTop: 6 }]}><Text style={{ fontWeight: '800', color: C.text }}>Pending Amount</Text><Text style={{ fontWeight: '900', color: C.text }}>{rupee(balDue)}</Text></View>
+              <>
+                {addl > 0 && <View style={[s.billRow, { marginTop: 6 }]}><Text style={s.billTxt}>Additional Paid</Text><Text style={[s.billTxt, { color: C.green }]}>-{rupee(addl)}</Text></View>}
+                <View style={[s.billRow, { marginTop: adv > 0 || addl > 0 ? 0 : 6 }]}><Text style={{ fontWeight: '800', color: C.text }}>Pending Amount</Text><Text style={{ fontWeight: '900', color: C.text }}>{rupee(balDue)}</Text></View>
+              </>
             )}
 
-            {refDue > 0 && (
+            {adv > 0 && refDue > 0 && (
               <View style={[s.togRow, { borderTopWidth: 1, borderTopColor: C.border, marginTop: 10, paddingTop: 10 }]}>
                 <Text style={s.togLabel}>Refund Returned to Customer</Text>
                 <Switch value={b.advanceReturned || false} onValueChange={(val) => save({ advanceReturned: val })} trackColor={{ false: '#D7CCC8', true: C.green }} thumbColor="#fff" />
@@ -313,8 +338,12 @@ export default function OrderDetailScreen({ route, navigation }) {
                 <Switch
                   value={isPaid}
                   onValueChange={async (val) => {
-                    if (val) await save({ paidAmount: total, paid: true });
-                    else await save({ paidAmount: 0, paid: false });
+                    if (val) {
+                      const newAddl = Math.max(0, total - adv);
+                      await save({ additionalPayment: newAddl, paid: true });
+                    } else {
+                      await save({ additionalPayment: 0, paid: false });
+                    }
                   }}
                   trackColor={{ false: C.redLight, true: C.greenLight }}
                   thumbColor={isPaid ? C.green : C.red}

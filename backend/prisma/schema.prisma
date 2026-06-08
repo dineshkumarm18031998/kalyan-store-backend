@@ -26,14 +26,14 @@ model Store {
 }
 
 model Product {
-  id         String  @id @default(cuid())
+  id         String   @id @default(cuid())
   name       String
   totalQty   Int
   rentPerDay Float
   category   String?
-  image      String? @db.Text
+  image      String?  @db.Text
   storeId    String
-  store      Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -41,34 +41,35 @@ model Product {
 }
 
 model Booking {
-  id          String   @id @default(cuid())
-  date        String
-  cName       String
-  cMob        String
-  cAddr       String?
-  notes       String?
-  eventType   String?
-  startDate   String
-  returnDate  String?
-  totalDays   Int      @default(0)
-  subtotal    Float    @default(0)
-  discount    Float    @default(0)
-  totalAmount Float    @default(0)
-  paid        Boolean  @default(false)
-  paidAmount  Float    @default(0)
-  returned    Boolean  @default(false)
+  id               String   @id @default(cuid())
+  date             String
+  cName            String
+  cMob             String
+  cAddr            String?
+  notes            String?
+  eventType        String?
+  startDate        String
+  returnDate       String?
+  totalDays        Int      @default(0)
+  subtotal         Float    @default(0)
+  discount         Float    @default(0)
+  totalAmount      Float    @default(0)
+  paid             Boolean  @default(false)
+  paidAmount       Float    @default(0)
+  additionalPayment Float   @default(0)
+  returned         Boolean  @default(false)
   actualReturnDate String?
-  isVip       Boolean  @default(false)
-  isDeleted   Boolean  @default(false)
-  advanceReturned Boolean @default(false)
-  generatedBy String?
-  storeId     String
-  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isVip            Boolean  @default(false)
+  isDeleted        Boolean  @default(false)
+  advanceReturned  Boolean  @default(false)
+  generatedBy      String?
+  storeId          String
+  store            Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  items       BookingItem[]
-  damages     Damage[]
+  items   BookingItem[]
+  damages Damage[]
 
   @@index([storeId])
   @@index([cMob])
@@ -88,12 +89,12 @@ model BookingItem {
 }
 
 model Damage {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   product   String
   qty       Int
   rate      Float
   bookingId String
-  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@index([bookingId])
