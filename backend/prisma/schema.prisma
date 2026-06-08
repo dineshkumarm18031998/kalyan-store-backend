@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Store {
+  id                 String   @id @default(cuid())
+  storeName          String
+  ownerName          String
+  mobile             String   @unique
+  password           String
+  address            String?
+  lang               String   @default("en")
+  createdBy          String?
+  createdBySignature String?  @db.Text
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  products Product[]
+  bookings Booking[]
+  members  Member[]
+}
+
+model Product {
+  id         String  @id @default(cuid())
+  name       String
+  totalQty   Int
+  rentPerDay Float
+  category   String?
+  image      String? @db.Text
+  storeId    String
+  store      Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([storeId])
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  date        String
+  cName       String
+  cMob        String
+  cAddr       String?
+  notes       String?
+  eventType   String?
+  startDate   String
+  returnDate  String?
+  totalDays   Int      @default(0)
+  subtotal    Float    @default(0)
+  discount    Float    @default(0)
+  totalAmount Float    @default(0)
+  paid        Boolean  @default(false)
+  paidAmount  Float    @default(0)
+  returned    Boolean  @default(false)
+  actualReturnDate String?
+  isVip       Boolean  @default(false)
+  isDeleted   Boolean  @default(false)
+  advanceReturned Boolean @default(false)
+  generatedBy String?
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       BookingItem[]
+  damages     Damage[]
+
+  @@index([storeId])
+  @@index([cMob])
+}
+
+model BookingItem {
+  id        String  @id @default(cuid())
+  name      String
+  qty       Int
+  rate      Float
+  deposit   Float   @default(0)
+  image     String? @db.Text
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+model Damage {
+  id        String  @id @default(cuid())
+  product   String
+  qty       Int
+  rate      Float
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
+}
+
+model Member {
+  id        String   @id @default(cuid())
+  name      String
+  signature String?  @db.Text
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([storeId])
+}
