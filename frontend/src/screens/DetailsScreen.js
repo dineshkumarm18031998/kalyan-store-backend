@@ -23,7 +23,7 @@ export default function DetailsScreen({ navigation }) {
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
   const filtered = useMemo(() => {
-    let l = bookings;
+    let l = bookings.filter(b => !b.isDeleted);
     if (flt === 'active') l = l.filter(b => !b.returned);
     if (flt === 'returned') l = l.filter(b => b.returned);
     if (flt === 'paid') l = l.filter(b => b.paid);

@@ -35,7 +35,7 @@ export default function OrderScreen({ navigation }) {
     })(); 
   }, []);
 
-  const getRented = (name) => bookings.filter(b => !b.returned).reduce((s, b) => {
+  const getRented = (name) => bookings.filter(b => !b.returned && !b.isDeleted).reduce((s, b) => {
     const it = (b.items || []).find(i => i.name === name); return s + (it ? it.qty : 0);
   }, 0);
 
