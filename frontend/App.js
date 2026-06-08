@@ -129,7 +129,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AppContext.Provider value={{ store, token, t, lang, products, setProducts, bookings, setBookings, logout: handleLogout }}>
+        <AppContext.Provider value={{ store, setStore, token, t, lang, products, setProducts, bookings, setBookings, logout: handleLogout }}>
           <StatusBar style="light" />
           <NavigationContainer>
             {!token ? (

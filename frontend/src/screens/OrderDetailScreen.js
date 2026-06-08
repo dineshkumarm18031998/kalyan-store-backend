@@ -61,6 +61,9 @@ export default function OrderDetailScreen({ route, navigation }) {
   const total = Math.max(0, sub - disc) + dmgAmt;
   const adv = b.paidAmount || 0;
   const rem = total - adv;
+  const balDue = Math.max(rem, 0);
+  const refDue = Math.max(-rem, 0);
+  const isPaid = balDue <= 0 && total > 0; // It's paid only if nothing is owed
 
   const save = async (extra = {}) => {
     try {
@@ -74,8 +77,22 @@ export default function OrderDetailScreen({ route, navigation }) {
     await save({ returned: val, ...(val ? { actualReturnDate: rd } : { actualReturnDate: null }) });
   };
 
-  const togglePaid = async (val) => {
-    await save({ paid: val, paidAmount: val ? total : adv });
+  const handleUpdateAdv = () => {
+    Alert.prompt(
+      "Update Payment",
+      "Enter total amount received so far:",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Save", onPress: async (val) => {
+            const v = parseFloat(val);
+            if (!isNaN(v)) await save({ paidAmount: v, paid: v >= total });
+          }
+        }
+      ],
+      "plain-text",
+      String(adv),
+      "number-pad"
+    );
   };
 
   const handleAddDmg = async () => {
@@ -101,8 +118,14 @@ export default function OrderDetailScreen({ route, navigation }) {
   const handleDelete = () => Alert.alert(t.delOrder, t.delConfirm, [
     { text: t.cancel, style: 'cancel' },
     { text: t.del, style: 'destructive', onPress: async () => {
-      try { await deleteBooking(b.id); setBookings(bookings.filter(x => x.id !== b.id)); navigation.goBack(); } catch (e) {} }
-    }
+      try { 
+        setBookings(bookings.filter(x => x.id !== b.id)); 
+        navigation.goBack(); 
+        await deleteBooking(b.id); 
+      } catch (e) {
+        Alert.alert("Error", "Failed to delete order on server");
+      } 
+    }}
   ]);
 
   const invTxt = () => {
@@ -112,8 +135,9 @@ export default function OrderDetailScreen({ route, navigation }) {
     if ((b.damages || []).length) { txt += `\n*Damages:*\n`; b.damages.forEach(x => { txt += `  ⚠️ ${x.product} × ${x.qty} = ${rupee(x.qty * x.rate)}\n`; }); }
     if (disc > 0) txt += `\n💸 Discount: -${rupee(disc)}\n`;
     txt += `\n${'━'.repeat(24)}\n💰 *TOTAL: ${rupee(total)}*\n`;
-    if (adv > 0) txt += `💵 Advance Paid: -${rupee(adv)}\n🔖 Balance: ${rupee(Math.abs(rem))} ${rem < 0 ? '(Refund Due / திருப்பி தரவேண்டியது)' : '(Due)'}\n`;
-    txt += `\n${b.paid ? '✅ PAID' : '⏳ UNPAID'}\n\n🙏 Thank you!\n_${b.generatedBy || store.ownerName}_\n🏪 ${store.storeName}`;
+    const balTxt = refDue > 0 ? `Refund Due / திருப்பி தரவேண்டியது: ${rupee(refDue)}` : `Balance Due: ${rupee(balDue)}`;
+    if (adv > 0) txt += `💵 Advance Paid: -${rupee(adv)}\n🔖 ${balTxt}\n`;
+    txt += `\n${isPaid ? '✅ PAID' : '⏳ UNPAID'}\n\n🙏 Thank you!\n_${b.generatedBy || store.ownerName}_\n🏪 ${store.storeName}`;
     return txt;
   };
 
@@ -131,7 +155,7 @@ export default function OrderDetailScreen({ route, navigation }) {
     await save({ generatedBy: adminName });
     
     const d = days || 1;
-    const html = `<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui;max-width:400px;margin:auto;padding:16px;color:#1a1a2e}.h{text-align:center;border-bottom:3px solid ${C.primary};padding-bottom:12px}.h h1{color:${C.primary};font-size:22px}table{width:100%;border-collapse:collapse;margin:8px 0}th{background:#FBE9E7;color:${C.primary};font-size:10px;padding:6px;text-align:left}td{padding:6px;font-size:12px;border-bottom:1px solid #f5f5f5}td:last-child{text-align:right}.t{background:${C.primary};color:#fff;padding:12px;border-radius:8px;display:flex;justify-content:space-between;margin:8px 0;font-weight:900}</style></head><body><div class="h"><h1>${store.storeName}</h1><p style="font-size:11px;color:#888">${store.ownerName} • ${store.mobile}</p></div><p style="padding:8px 0;font-weight:700">${b.cName} • ${b.cMob}</p><p style="font-size:12px;color:#666">${fDate(b.startDate)}${b.returnDate ? ` → ${fDate(b.returnDate)}` : ''} • ${d} Days</p><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th style="text-align:right">Amt</th></tr></thead><tbody>${(b.items || []).map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${rupee(i.rate)}</td><td style="text-align:right">${rupee(i.qty * i.rate * d)}</td></tr>`).join('')}${(b.damages || []).map(x => `<tr style="color:#C62828"><td>⚠ ${x.product}</td><td>${x.qty}</td><td>${rupee(x.rate)}</td><td style="text-align:right">${rupee(x.qty * x.rate)}</td></tr>`).join('')}</tbody></table>${disc > 0 ? `<p style="text-align:right;color:#2E7D32;font-size:12px">Discount: -${rupee(disc)}</p>` : ''}<div class="t"><span>Total</span><span style="font-size:20px">${rupee(total)}</span></div>${adv > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span>Advance Paid</span><span style="color:#2E7D32">-${rupee(adv)}</span></div><div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;font-weight:800"><span>Balance ${rem < 0 ? '(Refund Due / திருப்பி தரவேண்டியது)' : '(Due)'}</span><span>${rupee(Math.abs(rem))}</span></div>` : ''}<p style="text-align:center;padding:6px;border-radius:6px;font-weight:700;background:${b.paid ? '#E8F5E9' : '#FFEBEE'};color:${b.paid ? '#2E7D32' : '#C62828'}">${b.paid ? '✓ PAID' : '⏳ UNPAID'}</p>${signatureBase64 ? `<div style="text-align:right; margin-top:20px;"><img src="${signatureBase64}" style="width:100px; max-height:50px; object-fit:contain;" /><p style="font-size:10px; color:#555; margin-top:4px;">${adminName}</p></div>` : `<div style="text-align:right; margin-top:20px;"><p style="font-size:10px; color:#555; margin-top:4px;">${adminName}</p></div>`}<p style="text-align:center;font-size:9px;color:#aaa;margin-top:12px">Thank you! 🙏</p></body></html>`;
+    const html = `<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui;max-width:400px;margin:auto;padding:16px;color:#1a1a2e}.h{text-align:center;border-bottom:3px solid ${C.primary};padding-bottom:12px}.h h1{color:${C.primary};font-size:22px}table{width:100%;border-collapse:collapse;margin:8px 0}th{background:#FBE9E7;color:${C.primary};font-size:10px;padding:6px;text-align:left}td{padding:6px;font-size:12px;border-bottom:1px solid #f5f5f5}td:last-child{text-align:right}.t{background:${C.primary};color:#fff;padding:12px;border-radius:8px;display:flex;justify-content:space-between;margin:8px 0;font-weight:900}</style></head><body><div class="h"><h1>${store.storeName}</h1><p style="font-size:11px;color:#888">${store.ownerName} • ${store.mobile}</p></div><p style="padding:8px 0;font-weight:700">${b.cName} • ${b.cMob}</p><p style="font-size:12px;color:#666">${fDate(b.startDate)}${b.returnDate ? ` → ${fDate(b.returnDate)}` : ''} • ${d} Days</p><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th style="text-align:right">Amt</th></tr></thead><tbody>${(b.items || []).map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>${rupee(i.rate)}</td><td style="text-align:right">${rupee(i.qty * i.rate * d)}</td></tr>`).join('')}${(b.damages || []).map(x => `<tr style="color:#C62828"><td>⚠ ${x.product}</td><td>${x.qty}</td><td>${rupee(x.rate)}</td><td style="text-align:right">${rupee(x.qty * x.rate)}</td></tr>`).join('')}</tbody></table>${disc > 0 ? `<p style="text-align:right;color:#2E7D32;font-size:12px">Discount: -${rupee(disc)}</p>` : ''}<div class="t"><span>Total Bill</span><span style="font-size:20px">${rupee(total)}</span></div>${adv > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px"><span>Advance Paid</span><span style="color:#2E7D32">-${rupee(adv)}</span></div>` : ''}${(!adv && !isPaid) ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;font-weight:800"><span>Pending Amount</span><span>${rupee(balDue)}</span></div>` : ''}${adv > 0 ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:14px;font-weight:800"><span>${refDue > 0 ? 'Refund Due (திருப்பி தரவேண்டியது)' : 'Balance Due'}</span><span>${rupee(refDue > 0 ? refDue : balDue)}</span></div>` : ''}<p style="text-align:center;padding:6px;border-radius:6px;font-weight:700;margin-top:8px;background:${isPaid ? '#E8F5E9' : '#FFEBEE'};color:${isPaid ? '#2E7D32' : '#C62828'}">${isPaid ? '✓ PAID' : '⏳ UNPAID'}</p><p style="text-align:center;font-size:12px;color:#888;margin-top:20px">Thank you! 🙏</p><div style="text-align:right; margin-top:10px;">${signatureBase64 ? `<img src="${signatureBase64}" style="height:40px; object-fit:contain; margin-bottom:4px;" /><br/>` : ''}<span style="font-size:11px; color:#555; font-weight:bold;">${adminName || store.ownerName}</span></div></body></html>`;
     try { const { uri } = await Print.printToFileAsync({ html }); await Sharing.shareAsync(uri); } catch (e) {}
   };
 
@@ -228,14 +252,16 @@ export default function OrderDetailScreen({ route, navigation }) {
             {dmgAmt > 0 && <View style={s.billRow}><Text style={[s.billTxt, { color: C.red }]}>⚠️ {t.dmgChg}</Text><Text style={[s.billTxt, { color: C.red }]}>+{rupee(dmgAmt)}</Text></View>}
             <View style={s.billTotal}><Text style={s.billTotalTxt}>{t.total}</Text><Text style={s.billTotalTxt}>{rupee(total)}</Text></View>
             
-            {adv > 0 && (
+            {adv > 0 ? (
               <>
                 <View style={[s.billRow, { marginTop: 6 }]}><Text style={s.billTxt}>Advance Paid</Text><Text style={[s.billTxt, { color: C.green }]}>-{rupee(adv)}</Text></View>
-                <View style={s.billRow}><Text style={{ fontWeight: '800', color: C.text }}>Balance {rem < 0 ? 'Refund Due (திருப்பி தரவேண்டியது)' : 'Due'}</Text><Text style={{ fontWeight: '900', color: rem < 0 ? C.primary : C.text }}>{rupee(Math.abs(rem))}</Text></View>
+                <View style={s.billRow}><Text style={{ fontWeight: '800', color: C.text }}>{refDue > 0 ? 'Refund Amount' : 'Balance Due'}</Text><Text style={{ fontWeight: '900', color: refDue > 0 ? C.primary : C.text }}>{rupee(refDue > 0 ? refDue : balDue)}</Text></View>
               </>
+            ) : (
+              <View style={[s.billRow, { marginTop: 6 }]}><Text style={{ fontWeight: '800', color: C.text }}>Pending Amount</Text><Text style={{ fontWeight: '900', color: C.text }}>{rupee(balDue)}</Text></View>
             )}
 
-            {rem < 0 && (
+            {refDue > 0 && (
               <View style={[s.togRow, { borderTopWidth: 1, borderTopColor: C.border, marginTop: 10, paddingTop: 10 }]}>
                 <Text style={s.togLabel}>Refund Returned to Customer</Text>
                 <Switch value={b.advanceReturned || false} onValueChange={(val) => save({ advanceReturned: val })} trackColor={{ false: '#D7CCC8', true: C.green }} thumbColor="#fff" />
@@ -269,31 +295,45 @@ export default function OrderDetailScreen({ route, navigation }) {
 
           <View style={s.divider} />
 
-          <View style={s.statusRow}>
-            <View style={s.statusLeft}>
-              <Text style={s.statusIcon}>💰</Text>
-              <View>
-                <Text style={s.statusLabel}>{t.paid}/{t.unpaid}</Text>
-                <Text style={[s.statusValue, { color: b.paid ? C.green : C.red }]}>
-                  {b.paid ? t.paid + ' ✓' : t.unpaid}
-                </Text>
+            <View style={s.statusRow}>
+              <View style={s.statusLeft}>
+                <Text style={s.statusIcon}>💰</Text>
+                <View>
+                  <Text style={s.statusLabel}>{t.paid}/{t.unpaid}</Text>
+                  <Text style={[s.statusValue, { color: isPaid ? C.green : C.red }]}>
+                    {isPaid ? t.paid + ' ✓' : t.unpaid}
+                  </Text>
+                </View>
               </View>
+              {isPaid ? (
+                <TouchableOpacity style={[s.saveCalcBtn, { marginTop: 0, padding: 8 }]} onPress={handleUpdateAdv}>
+                  <Text style={s.saveCalcTxt}>Update Payment</Text>
+                </TouchableOpacity>
+              ) : (
+                <Switch
+                  value={isPaid}
+                  onValueChange={async (val) => {
+                    if (val) await save({ paidAmount: total, paid: true });
+                    else await save({ paidAmount: 0, paid: false });
+                  }}
+                  trackColor={{ false: C.redLight, true: C.greenLight }}
+                  thumbColor={isPaid ? C.green : C.red}
+                  style={{ transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }] }}
+                />
+              )}
             </View>
-            <Switch
-              value={b.paid}
-              onValueChange={togglePaid}
-              trackColor={{ false: C.redLight, true: C.greenLight }}
-              thumbColor={b.paid ? C.green : C.red}
-              style={{ transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }] }}
-            />
-          </View>
 
-          {!b.paid && (
-            <TouchableOpacity style={s.reminderLink} onPress={sendReminder}>
-              <Ionicons name="notifications-outline" size={14} color={C.orange} />
-              <Text style={s.reminderTxt}>{t.remind} →</Text>
-            </TouchableOpacity>
-          )}
+            {!isPaid && (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                <TouchableOpacity style={[s.reminderLink, { flex: 1, paddingLeft: 0 }]} onPress={sendReminder}>
+                  <Ionicons name="notifications-outline" size={14} color={C.orange} />
+                  <Text style={[s.reminderTxt, { flexShrink: 1 }]} numberOfLines={2}>{t.remind} →</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[s.saveCalcBtn, { marginTop: 0, padding: 8 }]} onPress={handleUpdateAdv}>
+                  <Text style={s.saveCalcTxt}>Update Payment</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
           <View style={s.divider} />
 
@@ -320,8 +360,14 @@ export default function OrderDetailScreen({ route, navigation }) {
         <View style={s.modalBg}><View style={s.sheet}>
           <View style={s.shHandle} />
           <Text style={s.shTitle}>⚠️ {t.addDmg}</Text>
-          <Text style={s.label}>{t.dmgProd}</Text>
-          <TextInput style={s.input} placeholder={t.dmgProd} value={dmgForm.product} onChangeText={v => setDmgForm(p => ({ ...p, product: v }))} placeholderTextColor={C.textMuted} />
+          <Text style={s.label}>Select Item</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+            {(b.items || []).map((it, idx) => (
+              <TouchableOpacity key={idx} style={[s.chip, dmgForm.product === it.name && s.chipOn]} onPress={() => setDmgForm(p => ({ ...p, product: it.name }))}>
+                <Text style={[s.chipTxt, dmgForm.product === it.name && s.chipTxtOn]}>{it.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View style={{ flex: 1 }}><Text style={s.label}>{t.dmgQty}</Text><TextInput style={s.input} keyboardType="number-pad" placeholder="2" value={dmgForm.qty} onChangeText={v => setDmgForm(p => ({ ...p, qty: v }))} placeholderTextColor={C.textMuted} /></View>
             <View style={{ flex: 1 }}><Text style={s.label}>{t.dmgRate}</Text><TextInput style={s.input} keyboardType="number-pad" placeholder="100" value={dmgForm.rate} onChangeText={v => setDmgForm(p => ({ ...p, rate: v }))} placeholderTextColor={C.textMuted} /></View>
@@ -423,11 +469,11 @@ const useStyles = (C) => StyleSheet.create({
   statusValue: { fontSize: 15, fontWeight: '800' },
   divider: { height: 1, backgroundColor: C.border, marginVertical: 2 },
 
-  reminderLink: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 8, paddingLeft: 36 },
+  reminderLink: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 8 },
   reminderTxt: { fontSize: 13, color: C.orange, fontWeight: '600' },
 
   dmgLink: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 10 },
-  dmgLinkTxt: { fontSize: 13, color: C.orange, fontWeight: '600' },
+  dmgLinkTxt: { fontSize: 13, color: C.orange, fontWeight: '600', flexShrink: 1 },
 
   shareRow: { flexDirection: 'row', gap: 6, marginBottom: 8 },
   shareBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, padding: 12, borderRadius: 12 },

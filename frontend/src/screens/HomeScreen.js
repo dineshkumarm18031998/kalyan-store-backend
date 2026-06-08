@@ -12,6 +12,7 @@ export default function HomeScreen({ navigation }) {
   const { theme: C } = useTheme();
   const s = useStyles(C);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [selCat, setSelCat] = React.useState('All');
 
   const load = useCallback(async () => {
     try {
@@ -43,17 +44,18 @@ export default function HomeScreen({ navigation }) {
   };
 
   const d = todayISO();
-  const todayRev = bookings.filter(b => b.date === d && b.paid).reduce((s, b) => s + b.totalAmount, 0);
-  const totalRev = bookings.filter(b => b.paid).reduce((s, b) => s + b.totalAmount, 0);
-  const pending = bookings.filter(b => !b.paid).reduce((s, b) => s + (b.totalAmount - (b.paidAmount || 0)), 0);
-  const dmgCol = bookings.reduce((s, b) => (b.damages || []).reduce((ss, x) => ss + x.qty * x.rate, s), 0);
+  const validBookings = bookings.filter(b => !b.isDeleted);
+  const todayRev = validBookings.filter(b => b.date === d && b.paid).reduce((s, b) => s + b.totalAmount, 0);
+  const totalRev = validBookings.filter(b => b.paid).reduce((s, b) => s + b.totalAmount, 0);
+  const pending = validBookings.reduce((s, b) => s + Math.max((b.totalAmount || 0) - (b.paidAmount || 0), 0), 0);
+  const dmgCol = validBookings.reduce((s, b) => (b.damages || []).reduce((ss, x) => ss + x.qty * x.rate, s), 0);
 
-  const getRented = (name) => bookings.filter(b => !b.returned).reduce((s, b) => {
+  const getRented = (name) => validBookings.filter(b => !b.returned).reduce((s, b) => {
     const it = (b.items || []).find(i => i.name === name);
     return s + (it ? it.qty : 0);
   }, 0);
 
-  const active = bookings.filter(b => !b.returned);
+  const active = validBookings.filter(b => !b.returned);
 
   const stats = [
     { l: t.todayCol, v: rupee(todayRev), c: C.teal, bg: C.tealLight, ic: '💰', f: 'today' },
@@ -99,29 +101,46 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* Stock Overview */}
-        {products.length > 0 && (
-          <View style={s.section}>
-            <Text style={s.secTitle}>📦 {t.stock}</Text>
-            <View style={s.stockGrid}>
-              {products.map(p => {
-                const r = getRented(p.name), a = p.totalQty - r;
-                const pct = p.totalQty > 0 ? (a / p.totalQty) * 100 : 0;
-                const bc = pct > 50 ? C.teal : pct > 20 ? C.yellow : C.red;
-                return (
-                  <View key={p.id} style={s.stockCard}>
-                    <View style={s.stockImg}>
-                      {p.image ? <Image source={{ uri: p.image }} style={s.stockImgI} /> : <Ionicons name="cube-outline" size={28} color="#ccc" />}
+        {products.length > 0 && (() => {
+          const cats = ['All', ...new Set(products.map(p => p.category).filter(Boolean))];
+          const filtered = selCat === 'All' ? products : products.filter(p => p.category === selCat);
+          return (
+            <View style={s.section}>
+              <Text style={s.secTitle}>📦 {t.stock}</Text>
+              
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                {cats.map(c => (
+                  <TouchableOpacity 
+                    key={c} 
+                    style={[s.catPill, selCat === c && s.catPillOn]} 
+                    onPress={() => setSelCat(c)}
+                  >
+                    <Text style={[s.catTxt, selCat === c && s.catTxtOn]}>{c}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.stockGrid}>
+                {filtered.map(p => {
+                  const r = getRented(p.name), a = p.totalQty - r;
+                  const pct = p.totalQty > 0 ? (a / p.totalQty) * 100 : 0;
+                  const bc = pct > 50 ? C.teal : pct > 20 ? C.yellow : C.red;
+                  return (
+                    <View key={p.id} style={s.stockCard}>
+                      <View style={s.stockImg}>
+                        {p.image ? <Image source={{ uri: p.image }} style={s.stockImgI} /> : <Ionicons name="cube-outline" size={28} color="#ccc" />}
+                      </View>
+                      <Text style={s.stockName} numberOfLines={1}>{p.name}</Text>
+                      <View style={s.stockBar}><View style={[s.stockFill, { width: `${pct}%`, backgroundColor: bc }]} /></View>
+                      <Text style={s.stockNums}><Text style={[s.stockFree, { color: bc }]}>{a}</Text> / {p.totalQty}</Text>
+                      <Text style={s.stockRate}>{rupee(p.rentPerDay)}{t.perDay}</Text>
                     </View>
-                    <Text style={s.stockName}>{p.name}</Text>
-                    <View style={s.stockBar}><View style={[s.stockFill, { width: `${pct}%`, backgroundColor: bc }]} /></View>
-                    <Text style={s.stockNums}><Text style={[s.stockFree, { color: bc }]}>{a}</Text> / {p.totalQty}</Text>
-                    <Text style={s.stockRate}>{rupee(p.rentPerDay)}{t.perDay}</Text>
-                  </View>
-                );
-              })}
+                  );
+                })}
+              </ScrollView>
             </View>
-          </View>
-        )}
+          );
+        })()}
 
         {/* Active Rentals */}
         {active.length > 0 && (
@@ -172,8 +191,12 @@ const useStyles = (C) => StyleSheet.create({
   statLbl: { fontSize: 9, fontWeight: '700', color: '#555', marginTop: 1 },
   section: { marginTop: 10, marginBottom: 6 },
   secTitle: { fontSize: 13, fontWeight: '800', marginBottom: 8, color: C.text },
-  stockGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  stockCard: { width: '47%', backgroundColor: C.card, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: C.border, alignItems: 'center' },
+  catPill: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, backgroundColor: C.inputBg, marginRight: 8, borderWidth: 1, borderColor: C.border },
+  catPillOn: { backgroundColor: C.primary, borderColor: C.primary },
+  catTxt: { fontSize: 13, fontWeight: '700', color: C.textMuted },
+  catTxtOn: { color: '#fff' },
+  stockGrid: { flexDirection: 'row', gap: 8 },
+  stockCard: { width: 140, backgroundColor: C.card, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: C.border, alignItems: 'center' },
   stockImg: { width: 50, height: 50, borderRadius: 12, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center', marginBottom: 4, overflow: 'hidden' },
   stockImgI: { width: 50, height: 50, borderRadius: 12 },
   stockName: { fontSize: 14, fontWeight: '800', marginBottom: 4, color: C.text },

@@ -23,6 +23,7 @@ export default function OrderScreen({ navigation }) {
   const [members, setMembers] = useState([]);
   const [done, setDone] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [selCat, setSelCat] = useState('All');
   const cu = (k, v) => setCust(p => ({ ...p, [k]: v }));
 
   useEffect(() => { 
@@ -119,13 +120,22 @@ export default function OrderScreen({ navigation }) {
         {/* Products */}
         <View style={s.card}>
           <Text style={s.secH}><Ionicons name="cube" size={14} /> {t.selProd}</Text>
-          {products.map(p => {
+          
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+            {['All', ...new Set(products.map(p => p.category).filter(Boolean))].map(c => (
+              <TouchableOpacity key={c} style={[s.catPill, selCat === c && s.catPillOn]} onPress={() => setSelCat(c)}>
+                <Text style={[s.catTxt, selCat === c && s.catTxtOn]} numberOfLines={1}>{c}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {(selCat === 'All' ? products : products.filter(p => p.category === selCat)).map(p => {
             const r = getRented(p.name), a = p.totalQty - r, sel = items.find(i => i.pid === p.id);
             return (
               <View key={p.id} style={[s.selProd, sel && s.selProdOn, a <= 0 && { opacity: 0.3 }]}>
                 <TouchableOpacity style={s.spTop} onPress={() => a > 0 && tog(p)} activeOpacity={0.7}>
                   <View style={s.spImg}>{p.image ? <Image source={{ uri: p.image }} style={s.spImgI} /> : <Ionicons name="cube-outline" size={18} color={C.textMuted} />}</View>
-                  <View style={s.spInfo}><Text style={s.spName}>{p.name}</Text><Text style={s.spMeta}>{rupee(p.rentPerDay)}{t.perDay} • {a} {t.avail}</Text></View>
+                  <View style={s.spInfo}><Text style={s.spName} numberOfLines={2}>{p.name}</Text><Text style={s.spMeta}>{rupee(p.rentPerDay)}{t.perDay} • {a} {t.avail}</Text></View>
                   <View style={[s.spCheck, sel && s.spCheckOn]}>{sel && <Ionicons name="checkmark" size={12} color="#fff" />}</View>
                 </TouchableOpacity>
                 {sel && (
@@ -215,13 +225,17 @@ const useStyles = (C) => StyleSheet.create({
   chipOn: { borderColor: C.primary, backgroundColor: C.primary + '20' },
   chipTxt: { fontSize: 11, fontWeight: '600', color: C.textMuted },
   chipTxtOn: { color: C.primary },
+  catPill: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, backgroundColor: C.inputBg, marginRight: 8, borderWidth: 1, borderColor: C.border },
+  catPillOn: { backgroundColor: C.primary, borderColor: C.primary },
+  catTxt: { fontSize: 13, fontWeight: '700', color: C.textMuted },
+  catTxtOn: { color: '#fff' },
   selProd: { borderWidth: 2, borderColor: C.border, borderRadius: 12, padding: 8, marginBottom: 5 },
   selProdOn: { borderColor: C.primary, backgroundColor: C.primary + '10' },
   spTop: { flexDirection: 'row', alignItems: 'center' },
-  spImg: { width: 36, height: 36, borderRadius: 8, backgroundColor: C.inputBg, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  spImgI: { width: 36, height: 36, borderRadius: 8 },
-  spInfo: { flex: 1, marginLeft: 8 },
-  spName: { fontSize: 13, fontWeight: '700', color: C.text },
+  spImg: { width: 34, height: 34, borderRadius: 8, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center' },
+  spImgI: { width: 34, height: 34, borderRadius: 8 },
+  spInfo: { flex: 1, paddingHorizontal: 10, flexShrink: 1 },
+  spName: { fontSize: 14, fontWeight: '700', color: C.text },
   spMeta: { fontSize: 10, color: C.textMuted },
   spCheck: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   spCheckOn: { backgroundColor: C.primary, borderColor: C.primary },

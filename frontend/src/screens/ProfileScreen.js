@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ProfileScreen({ navigation }) {
   const { store, setStore, t, logout } = useApp();
-  const { theme: C } = useTheme();
+  const { theme: C, themeName, changeTheme } = useTheme();
   const s = useStyles(C);
   
   const [storeName, setStoreName] = useState(store?.storeName || '');
@@ -182,6 +182,25 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
+        <Text style={[s.lbl, { marginTop: 16 }]}>{t.theme || 'Theme Color'}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>
+          {[
+            { id: 'Terracotta', color: '#D84315', name: 'Terracotta' },
+            { id: 'Emerald', color: '#059669', name: 'Emerald' },
+            { id: 'Indigo', color: '#4F46E5', name: 'Indigo' },
+            { id: 'DarkMode', color: '#1A1A1A', name: 'Dark Mode' }
+          ].map(th => (
+            <TouchableOpacity 
+              key={th.id} 
+              style={[s.themeBtn, { borderColor: themeName === th.id ? C.primary : C.border }]} 
+              onPress={() => changeTheme(th.id)}
+            >
+              <View style={[s.themeDot, { backgroundColor: th.color }]} />
+              <Text style={[s.themeTxt, themeName === th.id && { color: C.primary, fontWeight: '800' }]}>{th.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
         <TouchableOpacity style={[s.saveBtn, { backgroundColor: C.red, marginTop: 24 }]} onPress={logout}>
           <Text style={s.saveTxt}>{t.logout || 'Logout'}</Text>
         </TouchableOpacity>
@@ -222,5 +241,8 @@ const useStyles = (C) => StyleSheet.create({
   langBtn: { flex: 1, padding: 12, borderRadius: 8, borderWidth: 1.5, borderColor: C.border, alignItems: 'center', backgroundColor: C.card },
   langOn: { borderColor: C.primary, backgroundColor: C.primary + '15' },
   langTxt: { fontSize: 14, fontWeight: '700', color: C.textMuted },
-  langTxtOn: { color: C.primary }
+  langTxtOn: { color: C.primary },
+  themeBtn: { flexDirection: 'row', alignItems: 'center', padding: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1.5, marginRight: 8, backgroundColor: C.card },
+  themeDot: { width: 14, height: 14, borderRadius: 7, marginRight: 8 },
+  themeTxt: { fontSize: 13, fontWeight: '600', color: C.textMuted }
 });
