@@ -46,16 +46,23 @@ export default function HomeScreen({ navigation }) {
   const d = todayISO();
   const validBookings = bookings.filter(b => !b.isDeleted);
   
-  // 1. Today's Business
+  // 1. Today's Rental
   const todayCol = validBookings.filter(b => b.date === d).reduce((s, b) => s + (b.totalAmount || 0), 0);
   
-  // 2. Pending Amount
-  const pending = validBookings.filter(b => !b.paid).reduce((s, b) => s + (b.totalAmount || 0), 0);
+  // 2. Total Revenue
+  const totalRev = validBookings.reduce((s, b) => s + (b.totalAmount || 0), 0);
   
-  // 3. Active Orders
+  // 3. Pending Amount (Strictly Balance Due)
+  const pending = validBookings.reduce((s, b) => {
+    const received = (b.paidAmount || 0) + (b.additionalPayment || 0);
+    const bal = (b.totalAmount || 0) - received;
+    return s + Math.max(0, bal);
+  }, 0);
+  
+  // 4. Active Orders
   const activeCount = validBookings.filter(b => !b.returned).length;
   
-  // 4. Available Stock
+  // 5. Available Stock
   const totalInv = products.reduce((s, p) => s + p.totalQty, 0);
   const totalRented = validBookings.filter(b => !b.returned).reduce((s, b) => s + (b.items || []).reduce((ss, i) => ss + i.qty, 0), 0);
   const availStock = totalInv - totalRented;
@@ -69,6 +76,7 @@ export default function HomeScreen({ navigation }) {
 
   const stats = [
     { l: t.todayCol, v: rupee(todayCol), c: C.teal, bg: C.tealLight, ic: '💰', f: 'today' },
+    { l: t.totalRev, v: rupee(totalRev), c: C.blue, bg: C.blueLight, ic: '📊', f: 'all' },
     { l: t.pending, v: rupee(pending), c: C.red, bg: C.redLight, ic: '⏳', f: 'pending' },
     { l: t.activeOrd, v: activeCount, c: C.blue, bg: C.blueLight, ic: '📦', f: 'active' },
     { l: t.availStock, v: availStock, c: C.orange, bg: C.orangeLight, ic: '✅', f: 'stock' },
@@ -102,7 +110,7 @@ export default function HomeScreen({ navigation }) {
         {/* Stats Grid */}
         <View style={s.statsGrid}>
           {stats.map((st, i) => (
-            <TouchableOpacity key={i} style={[s.stat, { backgroundColor: st.bg }]} onPress={() => navigation.navigate('History', { filter: st.f })}>
+            <TouchableOpacity key={i} style={[s.stat, { backgroundColor: st.bg, width: stats.length === 5 && i === 4 ? '100%' : '48%' }]} onPress={() => navigation.navigate('History', { filter: st.f })}>
               <Text style={{ fontSize: 16 }}>{st.ic}</Text>
               <Text style={[s.statVal, { color: st.c }]}>{st.v}</Text>
               <Text style={s.statLbl}>{st.l}</Text>
