@@ -119,7 +119,7 @@ export default function OrderDetailScreen({ route, navigation }) {
     { text: t.cancel, style: 'cancel' },
     { text: t.del, style: 'destructive', onPress: async () => {
       try { 
-        setBookings(bookings.filter(x => x.id !== b.id)); 
+        setBookings(bookings.map(x => x.id === b.id ? { ...x, isDeleted: true } : x)); 
         navigation.goBack(); 
         await deleteBooking(b.id); 
       } catch (e) {

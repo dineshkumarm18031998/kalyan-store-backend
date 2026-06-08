@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/', auth, async (req, res) => {
   try {
     const bookings = await prisma.booking.findMany({
-      where: { storeId: req.storeId, isDeleted: false },
+      where: { storeId: req.storeId },
       include: { items: true, damages: true },
       orderBy: { createdAt: 'desc' }
     });
@@ -22,7 +22,7 @@ router.get('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const booking = await prisma.booking.findUnique({
-      where: { id: req.params.id, isDeleted: false },
+      where: { id: req.params.id },
       include: { items: true, damages: true }
     });
     if (!booking || booking.storeId !== req.storeId) {
