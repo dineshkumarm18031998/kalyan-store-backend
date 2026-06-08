@@ -46,17 +46,19 @@ export default function HomeScreen({ navigation }) {
   const d = todayISO();
   const validBookings = bookings.filter(b => !b.isDeleted);
   
-  // 1. Today's Collection (Rented Amount Today)
+  // 1. Today's Business
   const todayCol = validBookings.filter(b => b.date === d).reduce((s, b) => s + (b.totalAmount || 0), 0);
   
-  // 2. Rental Revenue (Total Rented Amount)
-  const totalRev = validBookings.reduce((s, b) => s + (b.totalAmount || 0), 0);
-  
-  // 3. Pending Collection (Unpaid Orders)
+  // 2. Pending Amount
   const pending = validBookings.filter(b => !b.paid).reduce((s, b) => s + (b.totalAmount || 0), 0);
   
-  // 4. Damage Collection
-  const dmgCol = validBookings.reduce((s, b) => (b.damages || []).reduce((ss, x) => ss + x.qty * x.rate, s), 0);
+  // 3. Active Orders
+  const activeCount = validBookings.filter(b => !b.returned).length;
+  
+  // 4. Available Stock
+  const totalInv = products.reduce((s, p) => s + p.totalQty, 0);
+  const totalRented = validBookings.filter(b => !b.returned).reduce((s, b) => s + (b.items || []).reduce((ss, i) => ss + i.qty, 0), 0);
+  const availStock = totalInv - totalRented;
 
   const getRented = (name) => validBookings.filter(b => !b.returned).reduce((s, b) => {
     const it = (b.items || []).find(i => i.name === name);
@@ -67,9 +69,9 @@ export default function HomeScreen({ navigation }) {
 
   const stats = [
     { l: t.todayCol, v: rupee(todayCol), c: C.teal, bg: C.tealLight, ic: '💰', f: 'today' },
-    { l: t.totalRev, v: rupee(totalRev), c: C.blue, bg: C.blueLight, ic: '📊', f: 'all' },
     { l: t.pending, v: rupee(pending), c: C.red, bg: C.redLight, ic: '⏳', f: 'pending' },
-    { l: t.dmgCol || 'Damage Collection', v: rupee(dmgCol), c: C.orange, bg: C.orangeLight, ic: '⚠️', f: 'damage' },
+    { l: t.activeOrd, v: activeCount, c: C.blue, bg: C.blueLight, ic: '📦', f: 'active' },
+    { l: t.availStock, v: availStock, c: C.orange, bg: C.orangeLight, ic: '✅', f: 'stock' },
   ];
 
   return (

@@ -330,26 +330,9 @@ export default function OrderDetailScreen({ route, navigation }) {
                   </Text>
                 </View>
               </View>
-              {isPaid ? (
-                <TouchableOpacity style={[s.saveCalcBtn, { marginTop: 0, padding: 8 }]} onPress={handleUpdateAdv}>
-                  <Text style={s.saveCalcTxt}>Update Payment</Text>
-                </TouchableOpacity>
-              ) : (
-                <Switch
-                  value={isPaid}
-                  onValueChange={async (val) => {
-                    if (val) {
-                      const newAddl = Math.max(0, total - adv);
-                      await save({ additionalPayment: newAddl, paid: true });
-                    } else {
-                      await save({ additionalPayment: 0, paid: false });
-                    }
-                  }}
-                  trackColor={{ false: C.redLight, true: C.greenLight }}
-                  thumbColor={isPaid ? C.green : C.red}
-                  style={{ transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }] }}
-                />
-              )}
+              <TouchableOpacity style={[s.saveCalcBtn, { marginTop: 0, padding: 8, backgroundColor: C.blue }]} onPress={handleUpdateAdv}>
+                <Text style={s.saveCalcTxt}>Update Payment</Text>
+              </TouchableOpacity>
             </View>
 
             {!isPaid && (
