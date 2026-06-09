@@ -74,11 +74,9 @@ export default function HomeScreen({ navigation }) {
   const active = validBookings.filter(b => b.status === 'ACTIVE');
 
   const stats = [
-    { l: "Active Orders", v: activeCount, c: C.blue, bg: C.blueLight, ic: '📦', f: 'active' },
-    { l: "Available Stock", v: availStock, c: C.orange, bg: C.orangeLight, ic: '✅', f: 'stock' },
-    { l: "Pending Settlement", v: pendingCount, c: C.red, bg: C.redLight, ic: '⏳', f: 'returned' },
-    { l: "This Month Rev", v: rupee(monthRev), c: C.teal, bg: C.tealLight, ic: '💰', f: 'month' },
-    { l: "Total Revenue", v: rupee(totalRev), c: C.primary, bg: C.primary + '20', ic: '📊', f: 'closed' },
+    { l: "Active Orders", v: activeCount, c: '#0288D1', bg: '#E1F5FE', ic: '📦', f: 'active' },
+    { l: "Available Stock", v: availStock, c: '#E65100', bg: '#FFF3E0', ic: '✅', f: 'stock' },
+    { l: "Pending Settles", v: pendingCount, c: '#C62828', bg: '#FFEBEE', ic: '⏳', f: 'returned' },
   ];
 
   return (
@@ -106,13 +104,25 @@ export default function HomeScreen({ navigation }) {
         <Text style={s.greet}>{t[getGreetKey()]}, {store?.ownerName?.split(' ')[0] || ''}! 🙏</Text>
         <Text style={s.date}>{fDateLong(d)}</Text>
 
-        {/* Stats Grid */}
+        <View style={s.heroCard}>
+          <Text style={s.heroSubtitle}>THIS MONTH REVENUE</Text>
+          <Text style={s.heroTitle}>{rupee(monthRev)}</Text>
+          <View style={s.heroFooter}>
+            <Text style={s.heroFooterTxt}>Total All-Time: {rupee(totalRev)}</Text>
+          </View>
+        </View>
+
+        {/* 3D Stats Grid */}
         <View style={s.statsGrid}>
           {stats.map((st, i) => (
-            <TouchableOpacity key={i} style={[s.stat, { backgroundColor: st.bg, width: stats.length === 5 && i === 4 ? '100%' : '48%' }]} onPress={() => navigation.navigate('History', { filter: st.f })}>
-              <Text style={{ fontSize: 16 }}>{st.ic}</Text>
-              <Text style={[s.statVal, { color: st.c }]}>{st.v}</Text>
-              <Text style={s.statLbl}>{st.l}</Text>
+            <TouchableOpacity key={i} style={[s.stat3D, { borderLeftColor: st.c }]} onPress={() => navigation.navigate('History', { filter: st.f })} activeOpacity={0.8}>
+              <View style={[s.statIconWrap, { backgroundColor: st.bg }]}>
+                <Text style={{ fontSize: 22 }}>{st.ic}</Text>
+              </View>
+              <View style={{ flex: 1, paddingLeft: 12 }}>
+                <Text style={[s.statVal, { color: st.c }]}>{st.v}</Text>
+                <Text style={s.statLbl}>{st.l}</Text>
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -200,39 +210,115 @@ const useStyles = (C) => StyleSheet.create({
   hOwner: { color: 'rgba(255,255,255,0.8)', fontSize: 11 },
   logoutBtn: { padding: 8, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)' },
   body: { flex: 1, padding: 12 },
-  greet: { fontSize: 18, fontWeight: '800', color: C.text },
-  date: { fontSize: 11, color: C.textMuted, marginBottom: 12 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  stat: { width: '48%', borderRadius: 14, padding: 12, overflow: 'hidden' },
-  statVal: { fontSize: 20, fontWeight: '900', marginTop: 2 },
-  statLbl: { fontSize: 9, fontWeight: '700', color: '#555', marginTop: 1 },
-  section: { marginTop: 10, marginBottom: 6 },
-  secTitle: { fontSize: 13, fontWeight: '800', marginBottom: 8, color: C.text },
-  catPill: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, backgroundColor: C.inputBg, marginRight: 8, borderWidth: 1, borderColor: C.border },
-  catPillOn: { backgroundColor: C.primary, borderColor: C.primary },
-  catTxt: { fontSize: 13, fontWeight: '700', color: C.textMuted },
+  greet: { fontSize: 22, fontWeight: '900', color: C.text, letterSpacing: -0.5 },
+  date: { fontSize: 13, color: C.textMuted, marginBottom: 16, fontWeight: '600' },
+  
+  heroCard: { 
+    backgroundColor: '#1E1E2C', 
+    borderRadius: 20, 
+    padding: 24, 
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)'
+  },
+  heroSubtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '800', letterSpacing: 1.2, marginBottom: 4 },
+  heroTitle: { color: '#00E676', fontSize: 36, fontWeight: '900', letterSpacing: -1 },
+  heroFooter: { marginTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 12 },
+  heroFooterTxt: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '700' },
+
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
+  stat3D: { 
+    width: '47%', 
+    backgroundColor: '#fff', 
+    borderRadius: 16, 
+    padding: 16, 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 6,
+    borderLeftWidth: 5,
+  },
+  statIconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  statVal: { fontSize: 22, fontWeight: '900' },
+  statLbl: { fontSize: 10, fontWeight: '800', color: '#777', marginTop: 2, textTransform: 'uppercase' },
+  
+  section: { marginTop: 10, marginBottom: 12 },
+  secTitle: { fontSize: 15, fontWeight: '900', marginBottom: 12, color: C.text, letterSpacing: -0.3 },
+  catPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#f0f0f5', marginRight: 8, borderWidth: 1, borderColor: '#e0e0e0' },
+  catPillOn: { backgroundColor: '#1E1E2C', borderColor: '#1E1E2C' },
+  catTxt: { fontSize: 13, fontWeight: '800', color: '#666' },
   catTxtOn: { color: '#fff' },
-  stockGrid: { flexDirection: 'row', gap: 8 },
-  stockCard: { width: 140, backgroundColor: C.card, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: C.border, alignItems: 'center' },
-  stockImg: { width: 50, height: 50, borderRadius: 12, backgroundColor: '#f5f5f5', alignItems: 'center', justifyContent: 'center', marginBottom: 4, overflow: 'hidden' },
-  stockImgI: { width: 50, height: 50, borderRadius: 12 },
-  stockName: { fontSize: 14, fontWeight: '800', marginBottom: 4, color: C.text },
-  stockBar: { width: '100%', height: 7, backgroundColor: C.border, borderRadius: 4, overflow: 'hidden', marginBottom: 3 },
+  stockGrid: { flexDirection: 'row', gap: 12 },
+  stockCard: { 
+    width: 140, 
+    backgroundColor: '#fff', 
+    borderRadius: 16, 
+    padding: 12, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+    alignItems: 'center',
+    marginBottom: 8,
+    marginLeft: 4
+  },
+  stockImg: { width: 60, height: 60, borderRadius: 16, backgroundColor: '#f8f9fa', alignItems: 'center', justifyContent: 'center', marginBottom: 8, overflow: 'hidden' },
+  stockImgI: { width: 60, height: 60, borderRadius: 16 },
+  stockName: { fontSize: 14, fontWeight: '900', marginBottom: 6, color: C.text },
+  stockBar: { width: '100%', height: 8, backgroundColor: '#f0f0f5', borderRadius: 4, overflow: 'hidden', marginBottom: 6 },
   stockFill: { height: '100%', borderRadius: 4 },
-  stockNums: { fontSize: 12, fontWeight: '700', color: C.textMuted },
-  stockFree: { fontSize: 15, fontWeight: '900' },
-  stockRate: { fontSize: 11, fontWeight: '700', color: C.primary, marginTop: 2 },
-  miniCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, borderRadius: 10, padding: 8, borderWidth: 1, borderColor: C.border, marginBottom: 4, gap: 8 },
-  mcAv: { width: 34, height: 34, borderRadius: 10, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
-  mcAvTxt: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  stockNums: { fontSize: 12, fontWeight: '800', color: '#888' },
+  stockFree: { fontSize: 16, fontWeight: '900' },
+  stockRate: { fontSize: 11, fontWeight: '800', color: C.primary, marginTop: 4, backgroundColor: C.primary+'15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  
+  miniCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#fff', 
+    borderRadius: 16, 
+    padding: 12, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 8, 
+    gap: 12,
+    marginHorizontal: 4
+  },
+  mcAv: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#1E1E2C', alignItems: 'center', justifyContent: 'center' },
+  mcAvTxt: { color: '#fff', fontWeight: '900', fontSize: 16 },
   mcInfo: { flex: 1 },
-  mcName: { fontWeight: '700', fontSize: 12, color: C.text },
-  mcItems: { fontSize: 9, color: C.textMuted },
+  mcName: { fontWeight: '800', fontSize: 14, color: C.text, marginBottom: 2 },
+  mcItems: { fontSize: 11, color: '#777', fontWeight: '600' },
   mcRight: { alignItems: 'flex-end' },
-  mcAmt: { fontWeight: '800', fontSize: 13, color: C.primary },
-  badge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
-  badgePaid: { backgroundColor: C.greenLight },
-  badgeUnpaid: { backgroundColor: C.redLight },
-  badgeTxt: { fontSize: 8, fontWeight: '700' },
-  fab: { position: 'absolute', bottom: 30, right: 20, width: 60, height: 60, backgroundColor: C.primary, borderRadius: 30, alignItems: 'center', justifyContent: 'center', elevation: 8, shadowColor: C.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+  mcAmt: { fontWeight: '900', fontSize: 15, color: '#1E1E2C', marginBottom: 4 },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  badgePaid: { backgroundColor: '#E8F5E9' },
+  badgeUnpaid: { backgroundColor: '#FFEBEE' },
+  badgeTxt: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase' },
+  
+  fab: { 
+    position: 'absolute', 
+    bottom: 30, right: 20, 
+    width: 64, height: 64, 
+    backgroundColor: '#00E676', 
+    borderRadius: 32, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    elevation: 12, 
+    shadowColor: '#00E676', 
+    shadowOffset: { width: 0, height: 8 }, 
+    shadowOpacity: 0.4, 
+    shadowRadius: 12 
+  },
 });

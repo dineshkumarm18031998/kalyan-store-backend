@@ -89,6 +89,40 @@ export default function OrderDetailScreen({ route, navigation }) {
     await save({ status: 'RETURNED', actualReturnDate: rd });
   };
 
+  const markAsReturnedAndPaid = async () => {
+    try {
+      const res = await updateBooking(b.id, { status: 'RETURNED', returnDate: rd, totalDays: days, subtotal: sub, discount: disc, totalAmount: total, isVip: vip, actualReturnDate: rd });
+      
+      const updatedTotal = res.data.totalAmount || 0;
+      const adv = res.data.paidAmount || 0;
+      const addl = res.data.additionalPayment || 0;
+      const bal = Math.max(0, updatedTotal - (adv + addl));
+      
+      if (bal > 0) {
+        await addBookingPayment(b.id, { amount: bal, remarks: 'Settled exactly on return' });
+      }
+      
+      const finalRes = await updateBooking(b.id, { status: 'CLOSED' });
+      setB(finalRes.data);
+      setBookings(bookings.map(x => x.id === b.id ? finalRes.data : x));
+    } catch (e) {
+      Alert.alert('Error', 'Failed to complete transaction');
+    }
+  };
+
+  const settleFullBalance = async () => {
+    try {
+      if (balDue > 0) {
+        await addBookingPayment(b.id, { amount: balDue, remarks: '1-Click full settlement' });
+      }
+      const finalRes = await updateBooking(b.id, { status: 'CLOSED' });
+      setB(finalRes.data);
+      setBookings(bookings.map(x => x.id === b.id ? finalRes.data : x));
+    } catch (e) {
+      Alert.alert('Error', 'Failed to settle balance');
+    }
+  };
+
   const processPayment = async (v) => {
     try {
       await addBookingPayment(b.id, { amount: v, remarks: 'Received via app' });
@@ -266,8 +300,11 @@ export default function OrderDetailScreen({ route, navigation }) {
               <Switch value={vip} onValueChange={(val) => { setVip(val); if (val) setCdisc(''); }} trackColor={{ false: '#D7CCC8', true: C.green }} thumbColor="#fff" />
             </View>
             {!vip && <><Text style={s.label}>{t.custDisc}</Text><TextInput style={s.input} keyboardType="number-pad" placeholder="0" value={cdisc} onChangeText={setCdisc} /></>}
+            <TouchableOpacity style={[s.saveCalcBtn, { backgroundColor: C.green, marginBottom: 8 }]} onPress={markAsReturnedAndPaid}>
+              <Text style={s.saveCalcTxt}>✨ Return Items & Mark as Fully Paid</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={[s.saveCalcBtn, { backgroundColor: C.blue }]} onPress={markAsReturned}>
-              <Text style={s.saveCalcTxt}>📦 Mark As Returned & Generate Bill</Text>
+              <Text style={s.saveCalcTxt}>📦 Mark As Returned (Unpaid)</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -351,9 +388,14 @@ export default function OrderDetailScreen({ route, navigation }) {
                     <Text style={[s.statusValue, { color: C.red }]}>{rupee(balDue)}</Text>
                   </View>
                 </View>
-                <TouchableOpacity style={[s.saveCalcBtn, { marginTop: 0, padding: 8, backgroundColor: C.blue }]} onPress={handleUpdateAdv}>
-                  <Text style={s.saveCalcTxt}>Receive Payment</Text>
-                </TouchableOpacity>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <TouchableOpacity style={[s.saveCalcBtn, { marginTop: 0, padding: 8, paddingHorizontal: 16, backgroundColor: C.green }]} onPress={settleFullBalance}>
+                    <Text style={s.saveCalcTxt}>💰 Settle Full Balance</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleUpdateAdv} style={{ marginTop: 8 }}>
+                    <Text style={{ color: C.textMuted, fontSize: 12, fontWeight: 'bold' }}>Custom Amount</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
 
