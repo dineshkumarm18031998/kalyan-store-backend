@@ -78,11 +78,11 @@ export default function HomeScreen({ navigation }) {
   const active = validBookings.filter(b => b.status === 'ACTIVE');
 
   const stats = [
-    { l: "Today's Rev", v: rupee(todayRev), c: '#00E676', bg: '#E8F5E9', ic: '💸', f: 'month' },
-    { l: "Active Orders", v: activeCount, c: '#0288D1', bg: '#E1F5FE', ic: '📦', f: 'active' },
-    { l: "Available Stock", v: availStock, c: '#E65100', bg: '#FFF3E0', ic: '✅', f: 'stock' },
-    { l: "Pending Settles", v: pendingCount, c: '#C62828', bg: '#FFEBEE', ic: '⏳', f: 'returned' },
-    { l: "Damaged Rev", v: rupee(dmgRev), c: '#8E24AA', bg: '#F3E5F5', ic: '⚠️', f: 'closed' },
+    { l: t.todayCol, v: rupee(todayRev), c: '#00E676', bg: '#E8F5E9', ic: '💸', f: 'month' },
+    { l: t.activeOrd, v: activeCount, c: '#0288D1', bg: '#E1F5FE', ic: '📦', f: 'active' },
+    { l: t.availStock, v: availStock, c: '#E65100', bg: '#FFF3E0', ic: '✅', f: 'stock' },
+    { l: t.pending, v: pendingCount, c: '#C62828', bg: '#FFEBEE', ic: '⏳', f: 'returned' },
+    { l: t.dmgRev, v: rupee(dmgRev), c: '#8E24AA', bg: '#F3E5F5', ic: '⚠️', f: 'closed' },
   ];
 
   return (
@@ -111,7 +111,7 @@ export default function HomeScreen({ navigation }) {
         <Text style={s.date}>{fDateLong(d)}</Text>
 
         <View style={s.heroCard}>
-          <Text style={s.heroSubtitle}>TOTAL REVENUE</Text>
+          <Text style={s.heroSubtitle}>{t.totalRev.toUpperCase()}</Text>
           <Text style={s.heroTitle}>{rupee(totalRev)}</Text>
         </View>
 
