@@ -11,7 +11,7 @@ import { useTheme } from '../utils/ThemeContext';
 import { getBooking, updateBooking, deleteBooking, addDamage, deleteDamage, getMembers, addBookingPayment } from '../utils/api';
 
 export default function OrderDetailScreen({ route, navigation }) {
-  const { t, store, bookings, setBookings } = useApp();
+  const { t, store, products, bookings, setBookings } = useApp();
   const { theme: C } = useTheme();
   const s = useStyles(C);
   
