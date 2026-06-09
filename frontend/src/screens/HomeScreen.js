@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Image, Alert, Dimensions, FlatList } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -15,6 +15,21 @@ export default function HomeScreen({ navigation }) {
   const s = useStyles(C);
   const [refreshing, setRefreshing] = React.useState(false);
   const [selCat, setSelCat] = React.useState('All');
+  
+  const flatListRef = useRef(null);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const scrollOffset = useRef(0);
+
+  useEffect(() => {
+    if (!autoScroll || products.length === 0) return;
+    const interval = setInterval(() => {
+      scrollOffset.current += 2; // scroll 2 pixels at a time
+      if (flatListRef.current) {
+        flatListRef.current.scrollToOffset({ offset: scrollOffset.current, animated: false });
+      }
+    }, 50); // 20 FPS
+    return () => clearInterval(interval);
+  }, [autoScroll, products.length]);
 
   const load = useCallback(async () => {
     try {
@@ -154,31 +169,29 @@ export default function HomeScreen({ navigation }) {
               </ScrollView>
 
               <FlatList
+                ref={flatListRef}
                 horizontal
-                pagingEnabled
                 showsHorizontalScrollIndicator={false}
-                data={Array.from({ length: Math.ceil(filtered.length / 4) }, (v, i) => filtered.slice(i * 4, i * 4 + 4))}
-                keyExtractor={(_, i) => String(i)}
-                renderItem={({ item }) => (
-                  <View style={{ width: width - 24, flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                    {item.map(p => {
-                      const r = getRented(p.name), a = p.totalQty - r;
-                      const pct = p.totalQty > 0 ? (a / p.totalQty) * 100 : 0;
-                      const bc = pct > 50 ? C.teal : pct > 20 ? C.yellow : C.red;
-                      return (
-                        <View key={p.id} style={s.stockCard}>
-                          <View style={s.stockImg}>
-                            {p.image ? <Image source={{ uri: p.image }} style={s.stockImgI} /> : <Ionicons name="cube-outline" size={28} color="#ccc" />}
-                          </View>
-                          <Text style={s.stockName} numberOfLines={1}>{p.name}</Text>
-                          <View style={s.stockBar}><View style={[s.stockFill, { width: `${pct}%`, backgroundColor: bc }]} /></View>
-                          <Text style={s.stockNums}><Text style={[s.stockFree, { color: bc }]}>{a}</Text> / {p.totalQty}</Text>
-                          <Text style={s.stockRate}>{rupee(p.rentPerDay)}{t.perDay}</Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                )}
+                data={filtered}
+                keyExtractor={p => String(p.id)}
+                onScrollBeginDrag={() => setAutoScroll(false)}
+                contentContainerStyle={{ paddingRight: 100 }}
+                renderItem={({ item: p }) => {
+                  const r = getRented(p.name), a = p.totalQty - r;
+                  const pct = p.totalQty > 0 ? (a / p.totalQty) * 100 : 0;
+                  const bc = pct > 50 ? C.teal : pct > 20 ? C.yellow : C.red;
+                  return (
+                    <View style={[s.stockCard, { width: 140, marginRight: 12 }]}>
+                      <View style={s.stockImg}>
+                        {p.image ? <Image source={{ uri: p.image }} style={s.stockImgI} /> : <Ionicons name="cube-outline" size={28} color="#ccc" />}
+                      </View>
+                      <Text style={s.stockName} numberOfLines={1}>{p.name}</Text>
+                      <View style={s.stockBar}><View style={[s.stockFill, { width: `${pct}%`, backgroundColor: bc }]} /></View>
+                      <Text style={s.stockNums}><Text style={[s.stockFree, { color: bc }]}>{a}</Text> / {p.totalQty}</Text>
+                      <Text style={s.stockRate}>{rupee(p.rentPerDay)}{t.perDay}</Text>
+                    </View>
+                  );
+                }}
               />
             </View>
           );
@@ -229,21 +242,20 @@ const useStyles = (C) => StyleSheet.create({
   date: { fontSize: 13, color: C.textMuted, marginBottom: 16, fontWeight: '600' },
   
   heroCard: { 
-    backgroundColor: '#1E1E2C', 
-    borderRadius: 20, 
-    padding: 24, 
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)'
+    backgroundColor: C.primary, 
+    borderRadius: 16, 
+    padding: 18, 
+    marginBottom: 20,
+    shadowColor: C.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
+    alignItems: 'center'
   },
-  heroSubtitle: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '800', letterSpacing: 1.2, marginBottom: 4 },
-  heroTitle: { color: '#00E676', fontSize: 36, fontWeight: '900', letterSpacing: -1 },
-  heroFooter: { marginTop: 16, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 12 },
+  heroSubtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '800', letterSpacing: 1.2, marginBottom: 4 },
+  heroTitle: { color: '#fff', fontSize: 28, fontWeight: '900', letterSpacing: -0.5 },
+  heroFooter: { marginTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)', paddingTop: 8 },
   heroFooterTxt: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '700' },
 
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
@@ -273,7 +285,6 @@ const useStyles = (C) => StyleSheet.create({
   catTxtOn: { color: '#fff' },
   stockGrid: { flexDirection: 'row', gap: 12 },
   stockCard: { 
-    width: '47%', 
     backgroundColor: '#fff', 
     borderRadius: 16, 
     padding: 12, 
