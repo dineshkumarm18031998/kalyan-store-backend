@@ -274,7 +274,8 @@ const useStyles = (C) => StyleSheet.create({
 
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
   stat3D: { 
-    width: '47%', 
+    minWidth: '45%', 
+    flex: 1,
     backgroundColor: '#fff', 
     borderRadius: 16, 
     padding: 16, 

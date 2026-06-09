@@ -64,7 +64,7 @@ export default function OrderScreen({ navigation }) {
         items: items.map(i => ({ name: i.name, qty: i.qty, rate: i.rate, image: i.image }))
       });
       setDone(res.data);
-    } catch (e) { Alert.alert('Error', 'Failed to create booking'); }
+    } catch (e) { Alert.alert('Error', e?.response?.data?.error || e.message || 'Failed to create booking'); }
     setLoading(false);
   };
 

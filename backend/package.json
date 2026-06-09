@@ -4,7 +4,7 @@
   "description": "Kalyan Store Rental Management API",
   "main": "src/index.js",
   "scripts": {
-    "start": "npx prisma db push --force-reset && node src/index.js",
+    "start": "npx prisma db push --accept-data-loss && node src/index.js",
     "dev": "nodemon src/index.js",
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate deploy",
