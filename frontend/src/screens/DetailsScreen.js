@@ -54,10 +54,14 @@ export default function DetailsScreen({ navigation }) {
 
         {filtered.map(b => {
           const st = getStatus(b);
+          const isClosed = b.status === 'CLOSED';
+          const cardBg = isClosed ? '#F1F8E9' : '#FFEBEE';
+          const cardBorder = isClosed ? '#AED581' : '#EF9A9A';
+          
           return (
-            <TouchableOpacity key={b.id} style={s.orderCard} onPress={() => navigation.navigate('OrderDetail', { bookingId: b.id })} activeOpacity={0.7}>
+            <TouchableOpacity key={b.id} style={[s.orderCard, { backgroundColor: cardBg, borderColor: cardBorder }]} onPress={() => navigation.navigate('OrderDetail', { bookingId: b.id })} activeOpacity={0.7}>
               <View style={s.ocTop}>
-                <View style={[s.ocAv, b.status !== 'ACTIVE' && { backgroundColor: C.blue }]}><Text style={s.ocAvTxt}>{b.cName?.[0]?.toUpperCase()}</Text></View>
+                <View style={[s.ocAv, { backgroundColor: isClosed ? '#81C784' : '#E57373' }]}><Text style={s.ocAvTxt}>{b.cName?.[0]?.toUpperCase()}</Text></View>
                 <View style={s.ocInfo}>
                   <Text style={s.ocName}>{b.cName}</Text>
                   <Text style={s.ocPhone}><Ionicons name="call-outline" size={9} /> {b.cMob}</Text>

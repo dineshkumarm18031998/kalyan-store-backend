@@ -23,13 +23,20 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     if (!autoScroll || products.length === 0) return;
     const interval = setInterval(() => {
-      scrollOffset.current += 2; // scroll 2 pixels at a time
+      scrollOffset.current += 1.5; // scroll 1.5 pixels at a time
+      
+      // Calculate max scroll width approximately
+      const maxScroll = filtered.length * 152;
+      if (scrollOffset.current > maxScroll) {
+        scrollOffset.current = 0;
+      }
+
       if (flatListRef.current) {
         flatListRef.current.scrollToOffset({ offset: scrollOffset.current, animated: false });
       }
-    }, 50); // 20 FPS
+    }, 40); // 25 FPS
     return () => clearInterval(interval);
-  }, [autoScroll, products.length]);
+  }, [autoScroll, products.length, filtered.length]);
 
   const load = useCallback(async () => {
     try {
@@ -174,14 +181,21 @@ export default function HomeScreen({ navigation }) {
                 showsHorizontalScrollIndicator={false}
                 data={filtered}
                 keyExtractor={p => String(p.id)}
+                onTouchStart={() => setAutoScroll(false)}
+                onTouchEnd={() => {
+                  setTimeout(() => setAutoScroll(true), 1500); // Resume after 1.5s
+                }}
                 onScrollBeginDrag={() => setAutoScroll(false)}
+                onScrollEndDrag={() => {
+                  setTimeout(() => setAutoScroll(true), 1500);
+                }}
                 contentContainerStyle={{ paddingRight: 100 }}
                 renderItem={({ item: p }) => {
                   const r = getRented(p.name), a = p.totalQty - r;
                   const pct = p.totalQty > 0 ? (a / p.totalQty) * 100 : 0;
                   const bc = pct > 50 ? C.teal : pct > 20 ? C.yellow : C.red;
                   return (
-                    <View style={[s.stockCard, { width: 140, marginRight: 12 }]}>
+                    <TouchableOpacity activeOpacity={0.8} onPress={() => navigation.navigate('Products')} style={[s.stockCard, { width: 140, marginRight: 12 }]}>
                       <View style={s.stockImg}>
                         {p.image ? <Image source={{ uri: p.image }} style={s.stockImgI} /> : <Ionicons name="cube-outline" size={28} color="#ccc" />}
                       </View>
@@ -189,7 +203,7 @@ export default function HomeScreen({ navigation }) {
                       <View style={s.stockBar}><View style={[s.stockFill, { width: `${pct}%`, backgroundColor: bc }]} /></View>
                       <Text style={s.stockNums}><Text style={[s.stockFree, { color: bc }]}>{a}</Text> / {p.totalQty}</Text>
                       <Text style={s.stockRate}>{rupee(p.rentPerDay)}{t.perDay}</Text>
-                    </View>
+                    </TouchableOpacity>
                   );
                 }}
               />
