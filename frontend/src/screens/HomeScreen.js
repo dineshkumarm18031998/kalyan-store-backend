@@ -20,6 +20,8 @@ export default function HomeScreen({ navigation }) {
   const [autoScroll, setAutoScroll] = useState(true);
   const scrollOffset = useRef(0);
 
+  const filtered = selCat === 'All' ? products : products.filter(p => p.category === selCat);
+
   useEffect(() => {
     if (!autoScroll || products.length === 0) return;
     const interval = setInterval(() => {
@@ -155,10 +157,8 @@ export default function HomeScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Stock Overview */}
         {products.length > 0 && (() => {
           const cats = ['All', ...new Set(products.map(p => p.category).filter(Boolean))];
-          const filtered = selCat === 'All' ? products : products.filter(p => p.category === selCat);
           return (
             <View style={s.section}>
               <Text style={s.secTitle}>📦 {t.stock}</Text>
