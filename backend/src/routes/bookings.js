@@ -9,7 +9,7 @@ router.get('/', auth, async (req, res) => {
   try {
     const bookings = await prisma.booking.findMany({
       where: { storeId: req.storeId },
-      include: { items: true, damages: true },
+      include: { items: true, damages: true, payments: true },
       orderBy: { createdAt: 'desc' }
     });
     res.json(bookings);
@@ -23,7 +23,7 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const booking = await prisma.booking.findUnique({
       where: { id: req.params.id },
-      include: { items: true, damages: true }
+      include: { items: true, damages: true, payments: true }
     });
     if (!booking || booking.storeId !== req.storeId) {
       return res.status(404).json({ error: 'Booking not found' });
@@ -78,6 +78,43 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
+// Add payment to booking
+router.post('/:id/payment', auth, async (req, res) => {
+  try {
+    const { amount, remarks } = req.body;
+    if (!amount || amount <= 0) return res.status(400).json({ error: 'Valid amount required' });
+
+    const existing = await prisma.booking.findUnique({ where: { id: req.params.id } });
+    if (!existing || existing.storeId !== req.storeId) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    // 1. Create Payment History Record
+    // 2. Increment additionalPayment
+    const [payment, booking] = await prisma.$transaction([
+      prisma.paymentHistory.create({
+        data: {
+          amount: parseFloat(amount),
+          remarks: remarks || null,
+          bookingId: req.params.id
+        }
+      }),
+      prisma.booking.update({
+        where: { id: req.params.id },
+        data: {
+          additionalPayment: { increment: parseFloat(amount) }
+        },
+        include: { items: true, damages: true, payments: true }
+      })
+    ]);
+
+    res.json(booking);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to add payment' });
+  }
+});
+
 // Update booking (return date, payment, etc)
 router.put('/:id', auth, async (req, res) => {
   try {
@@ -105,7 +142,7 @@ router.put('/:id', auth, async (req, res) => {
         ...(generatedBy !== undefined && { generatedBy }),
         ...(advanceReturned !== undefined && { advanceReturned })
       },
-      include: { items: true, damages: true }
+      include: { items: true, damages: true, payments: true }
     });
     res.json(booking);
   } catch (err) {

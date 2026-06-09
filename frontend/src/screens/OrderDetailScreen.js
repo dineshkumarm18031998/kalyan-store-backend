@@ -8,7 +8,7 @@ import * as Sharing from 'expo-sharing';
 import { useApp } from '../utils/AppContext';
 import { rupee, fDate, todayISO, daysBetween } from '../utils/theme';
 import { useTheme } from '../utils/ThemeContext';
-import { getBooking, updateBooking, deleteBooking, addDamage, deleteDamage, getMembers } from '../utils/api';
+import { getBooking, updateBooking, deleteBooking, addDamage, deleteDamage, getMembers, addBookingPayment } from '../utils/api';
 
 export default function OrderDetailScreen({ route, navigation }) {
   const { t, store, bookings, setBookings } = useApp();
@@ -87,18 +87,40 @@ export default function OrderDetailScreen({ route, navigation }) {
     await save({ returned: val, ...(val ? { actualReturnDate: rd } : { actualReturnDate: null }) });
   };
 
+  const processPayment = async (v) => {
+    try {
+      await addBookingPayment(b.id, { amount: v, remarks: 'Received via app' });
+      const res = await getBooking(b.id);
+      setB(res.data);
+      setBookings(bookings.map(x => x.id === b.id ? res.data : x));
+    } catch (e) {
+      Alert.alert('Error', 'Failed to add payment');
+    }
+  };
+
   const handleUpdateAdv = () => {
     Alert.prompt(
       "Receive Payment",
       "Enter amount received:",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Save", onPress: async (val) => {
+        { text: "Save", onPress: (val) => {
             const v = parseFloat(val);
-            if (!isNaN(v) && v > 0) {
-              const newAddl = addl + v;
-              const newBal = total - (adv + newAddl);
-              await save({ additionalPayment: newAddl, paid: newBal <= 0 });
+            if (isNaN(v) || v <= 0) {
+              setTimeout(() => Alert.alert("Error", "Please enter a valid payment amount."), 500);
+              return;
+            }
+            if (v > balDue) {
+              setTimeout(() => Alert.alert(
+                "Warning",
+                "This amount exceeds the pending balance and will create a refund amount.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Confirm", onPress: () => processPayment(v) }
+                ]
+              ), 500);
+            } else {
+              processPayment(v);
             }
           }
         }
@@ -293,6 +315,22 @@ export default function OrderDetailScreen({ route, navigation }) {
                 <Switch value={b.advanceReturned || false} onValueChange={(val) => save({ advanceReturned: val })} trackColor={{ false: '#D7CCC8', true: C.green }} thumbColor="#fff" />
               </View>
             )}
+          </View>
+        )}
+
+        {/* Payment History */}
+        {(b.payments || []).length > 0 && (
+          <View style={s.card}>
+            <Text style={s.secH}>💸 Payment History</Text>
+            {b.payments.map((p, i) => (
+              <View key={p.id} style={s.itemRow}>
+                <View>
+                  <Text style={s.itemName}>Payment {i + 1}</Text>
+                  <Text style={s.itemCalc}>{fDate(p.createdAt)}</Text>
+                </View>
+                <Text style={[s.itemAmt, { color: C.green }]}>+{rupee(p.amount)}</Text>
+              </View>
+            ))}
           </View>
         )}
 

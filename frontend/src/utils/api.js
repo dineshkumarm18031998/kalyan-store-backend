@@ -44,6 +44,7 @@ export const getBooking = (id) => api.get(`/bookings/${id}`);
 export const createBooking = (data) => api.post('/bookings', data);
 export const updateBooking = (id, data) => api.put(`/bookings/${id}`, data);
 export const deleteBooking = (id) => api.delete(`/bookings/${id}`);
+export const addBookingPayment = (id, data) => api.post(`/bookings/${id}/payment`, data);
 export const addDamage = (bookingId, data) => api.post(`/damages/${bookingId}`, data);
 export const deleteDamage = (id) => api.delete(`/damages/${id}`);
 export const updateProfile = (data) => api.put('/auth/profile', data);

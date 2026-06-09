@@ -68,8 +68,9 @@ model Booking {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  items   BookingItem[]
-  damages Damage[]
+  items    BookingItem[]
+  damages  Damage[]
+  payments PaymentHistory[]
 
   @@index([storeId])
   @@index([cMob])
@@ -109,4 +110,16 @@ model Member {
   createdAt DateTime @default(now())
 
   @@index([storeId])
+}
+
+model PaymentHistory {
+  id          String   @id @default(cuid())
+  amount      Float
+  paymentDate String?
+  remarks     String?
+  bookingId   String
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([bookingId])
 }
