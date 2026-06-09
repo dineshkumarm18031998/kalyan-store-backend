@@ -89,21 +89,22 @@ export default function OrderDetailScreen({ route, navigation }) {
 
   const handleUpdateAdv = () => {
     Alert.prompt(
-      "Update Payment",
-      "Enter additional payment received (excluding advance):",
+      "Receive Payment",
+      "Enter amount received:",
       [
         { text: "Cancel", style: "cancel" },
         { text: "Save", onPress: async (val) => {
             const v = parseFloat(val);
-            if (!isNaN(v)) {
-              const newBal = total - (adv + v);
-              await save({ additionalPayment: v, paid: newBal <= 0 });
+            if (!isNaN(v) && v > 0) {
+              const newAddl = addl + v;
+              const newBal = total - (adv + newAddl);
+              await save({ additionalPayment: newAddl, paid: newBal <= 0 });
             }
           }
         }
       ],
       "plain-text",
-      String(addl),
+      "",
       "number-pad"
     );
   };
@@ -336,13 +337,10 @@ export default function OrderDetailScreen({ route, navigation }) {
             </View>
 
             {!isPaid && (
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
                 <TouchableOpacity style={[s.reminderLink, { flex: 1, paddingLeft: 0 }]} onPress={sendReminder}>
                   <Ionicons name="notifications-outline" size={14} color={C.orange} />
                   <Text style={[s.reminderTxt, { flexShrink: 1 }]} numberOfLines={2}>{t.remind} →</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[s.saveCalcBtn, { marginTop: 0, padding: 8 }]} onPress={handleUpdateAdv}>
-                  <Text style={s.saveCalcTxt}>Update Payment</Text>
                 </TouchableOpacity>
               </View>
             )}
