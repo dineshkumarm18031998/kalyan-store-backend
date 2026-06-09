@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Store {
-  id                 String   @id @default(cuid())
+  id                 Int      @id @default(autoincrement())
   storeName          String
   ownerName          String
   mobile             String   @unique
@@ -32,7 +32,7 @@ model Product {
   rentPerDay Float
   category   String?
   image      String?  @db.Text
-  storeId    String
+  storeId    Int
   store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -64,7 +64,7 @@ model Booking {
   isDeleted        Boolean  @default(false)
   advanceReturned  Boolean  @default(false)
   generatedBy      String?
-  storeId          String
+  storeId          Int
   store            Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -106,7 +106,7 @@ model Member {
   id        String   @id @default(cuid())
   name      String
   signature String?  @db.Text
-  storeId   String
+  storeId   Int
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
