@@ -123,7 +123,7 @@ export default function ProductsScreen({ navigation }) {
         <View style={{ height: 80 }} />
       </ScrollView>
       <TouchableOpacity style={s.fab} onPress={() => { setEditId(null); setForm({ name: '', totalQty: '', rentPerDay: '', category: '', image: null }); setModal(true); }}>
-        <Ionicons name="add" size={26} color="#fff" />
+        <Ionicons name="add" size={32} color="#fff" />
       </TouchableOpacity>
       <Modal visible={modal} animationType="slide" transparent>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.modalBg}>
@@ -180,7 +180,20 @@ const useStyles = (C) => StyleSheet.create({
   empTitle: { fontSize: 16, fontWeight: '800', marginTop: 4, color: C.text }, empSub: { fontSize: 12, color: C.textMuted },
   empBtn: { backgroundColor: C.primary, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, marginTop: 12 },
   empBtnTxt: { color: '#fff', fontWeight: '700' },
-  fab: { position: 'absolute', bottom: 70, right: 16, width: 52, height: 52, borderRadius: 14, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', elevation: 6 },
+  fab: { 
+    position: 'absolute', 
+    bottom: 30, right: 20, 
+    width: 64, height: 64, 
+    backgroundColor: '#00E676', 
+    borderRadius: 32, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    elevation: 12, 
+    shadowColor: '#00E676', 
+    shadowOffset: { width: 0, height: 8 }, 
+    shadowOpacity: 0.4, 
+    shadowRadius: 12 
+  },
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   sheet: { backgroundColor: C.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, maxHeight: '85%' },
   shHandle: { width: 36, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: 'center', marginBottom: 10 },
