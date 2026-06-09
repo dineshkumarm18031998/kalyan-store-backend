@@ -10,7 +10,7 @@
     "prisma:migrate": "npx prisma migrate deploy",
     "prisma:push": "npx prisma db push",
     "postinstall": "npx prisma generate",
-    "build": "npx prisma db push --accept-data-loss"
+    "build": "npx prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

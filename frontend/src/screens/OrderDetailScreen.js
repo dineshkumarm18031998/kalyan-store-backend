@@ -49,7 +49,7 @@ export default function OrderDetailScreen({ route, navigation }) {
         } else {
            setSig(store?.createdBySignature);
         }
-      } catch (e) { Alert.alert('Error', 'Failed to load'); navigation.goBack(); }
+      } catch (e) { Alert.alert('Error', e?.response?.data?.error || e.message || 'Failed to share Reminder'); navigation.goBack(); }
       setLoading(false);
     })();
   }, [bookingId]);
@@ -82,7 +82,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       const res = await updateBooking(b.id, { returnDate: rd, totalDays: days, subtotal: sub, discount: disc, totalAmount: total, isVip: vip, ...extra });
       setB(res.data);
       setBookings(bookings.map(x => x.id === b.id ? res.data : x));
-    } catch (e) { Alert.alert('Error', 'Failed to update'); }
+    } catch (e) { Alert.alert('Error', e?.response?.data?.error || e.message || 'Failed to generate PDF'); }
   };
 
   const markAsReturned = async () => {
@@ -119,7 +119,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       setB(finalRes.data);
       setBookings(bookings.map(x => x.id === b.id ? finalRes.data : x));
     } catch (e) {
-      Alert.alert('Error', 'Failed to settle balance');
+      Alert.alert('Error', e?.response?.data?.error || e.message || 'Failed to settle balance');
     }
   };
 
@@ -138,7 +138,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       setB(res.data);
       setBookings(bookings.map(x => x.id === b.id ? res.data : x));
     } catch (e) {
-      Alert.alert('Error', 'Failed to add payment');
+      Alert.alert('Error', e?.response?.data?.error || e.message || 'Failed to add payment');
     }
   };
 
