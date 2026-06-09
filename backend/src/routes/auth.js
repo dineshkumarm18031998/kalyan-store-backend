@@ -67,7 +67,36 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Update Profile
+// Reset Password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { mobile, ownerName, newPassword } = req.body;
+    if (!mobile || !ownerName || !newPassword) {
+      return res.status(400).json({ error: 'Mobile, Owner Name, and New Password are required' });
+    }
+
+    const store = await prisma.store.findUnique({ where: { mobile } });
+    if (!store) return res.status(404).json({ error: 'Store not found for this mobile number' });
+
+    // Case-insensitive comparison of ownerName
+    if (store.ownerName.trim().toLowerCase() !== ownerName.trim().toLowerCase()) {
+      return res.status(401).json({ error: 'Owner Name does not match our records' });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await prisma.store.update({
+      where: { mobile },
+      data: { password: hashed }
+    });
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// Get Profile
 const auth = require('../middleware/auth');
 router.put('/profile', auth, async (req, res) => {
   try {

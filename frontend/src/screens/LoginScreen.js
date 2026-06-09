@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../utils/ThemeContext';
 import { T } from '../utils/lang';
-import { login, register } from '../utils/api';
+import { login, register, resetPassword } from '../utils/api';
 
 export default function LoginScreen({ onLogin }) {
   const { theme: C } = useTheme();
@@ -19,6 +19,7 @@ export default function LoginScreen({ onLogin }) {
   // Form fields — separate for login and register to avoid confusion
   const [loginForm, setLoginForm] = useState({ mobile: '', password: '' });
   const [regForm, setRegForm] = useState({ storeName: '', ownerName: '', mobile: '', password: '', address: '' });
+  const [forgotForm, setForgotForm] = useState({ mobile: '', ownerName: '', newPassword: '' });
 
   const t = T[lang]; // current language translations
 
@@ -55,15 +56,12 @@ export default function LoginScreen({ onLogin }) {
       }
     } catch (e) {
       const msg = e.response?.data?.error;
-      if (msg) {
-        setError(msg);
-      } else if (e.message?.includes('Network')) {
-        setError(lang === 'ta' ? 'சர்வர் இணைப்பு தோல்வி. பின்னர் முயற்சிக்கவும்.' : 'Cannot connect to server. Check internet and try again.');
-      } else {
-        setError(lang === 'ta' ? 'ஏதோ தவறு ஏற்பட்டது' : 'Something went wrong');
-      }
+      if (msg) setError(msg);
+      else if (e.message?.includes('Network')) setError(lang === 'ta' ? 'இணைய இணைப்பு பிழை' : 'Network error. Check connection.');
+      else setError(t.inv);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleRegister = async () => {
@@ -105,6 +103,34 @@ export default function LoginScreen({ onLogin }) {
     setLoading(false);
   };
 
+  const handleForgot = async () => {
+    setError('');
+    if (!forgotForm.mobile || !forgotForm.ownerName || !forgotForm.newPassword) {
+      setError(t.allReq); return;
+    }
+    if (forgotForm.mobile.length !== 10) {
+      setError(lang === 'ta' ? '10 இலக்க மொபைல் எண் தேவை' : 'Enter valid 10-digit mobile'); return;
+    }
+    if (forgotForm.newPassword.length < 4) {
+      setError(lang === 'ta' ? 'கடவுச்சொல் 4+ எழுத்துகள்' : 'Password must be 4+ characters'); return;
+    }
+
+    setLoading(true);
+    try {
+      await resetPassword(forgotForm);
+      Alert.alert('Success', lang === 'ta' ? 'கடவுச்சொல் மாற்றப்பட்டது!' : 'Password updated successfully!');
+      setMode('login');
+      setLoginForm({ mobile: forgotForm.mobile, password: '' });
+      setForgotForm({ mobile: '', ownerName: '', newPassword: '' });
+    } catch (e) {
+      const msg = e.response?.data?.error;
+      if (msg) setError(msg);
+      else setError('Failed to reset password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Switch mode and clear errors
   const switchMode = (newMode) => {
     setMode(newMode);
@@ -127,11 +153,16 @@ export default function LoginScreen({ onLogin }) {
           {/* Login / Register tabs */}
           <View style={s.tabs}>
             <TouchableOpacity style={[s.tab, mode === 'login' && s.tabOn]} onPress={() => switchMode('login')}>
-              <Text style={[s.tabTxt, mode === 'login' && s.tabTxtOn]}>{t.login}</Text>
+              <Text style={[s.tabTxt, mode === 'login' && s.tabTxtOn]}>{t.loginTab}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[s.tab, mode === 'register' && s.tabOn]} onPress={() => switchMode('register')}>
-              <Text style={[s.tabTxt, mode === 'register' && s.tabTxtOn]}>{t.register}</Text>
+              <Text style={[s.tabTxt, mode === 'register' && s.tabTxtOn]}>{t.registerTab}</Text>
             </TouchableOpacity>
+            {mode === 'forgot' && (
+              <TouchableOpacity style={[s.tab, s.tabOn]} activeOpacity={1}>
+                <Text style={[s.tabTxt, s.tabTxtOn]}>{lang === 'ta' ? 'கடவுச்சொல் மீட்டமை' : 'Reset Password'}</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Language selector — always visible */}
@@ -225,6 +256,47 @@ export default function LoginScreen({ onLogin }) {
                 returnKeyType="go"
                 placeholderTextColor={C.textMuted}
               />
+              <TouchableOpacity onPress={() => switchMode('forgot')} style={{ alignItems: 'flex-end', marginTop: 8 }}>
+                <Text style={{ color: C.primary, fontSize: 13, fontWeight: '600' }}>{lang === 'ta' ? 'கடவுச்சொல்லை மறந்துவிட்டீர்களா?' : 'Forgot Password?'}</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* ═══ FORGOT PASSWORD FORM ═══ */}
+          {mode === 'forgot' && (
+            <>
+              <Text style={s.label}>{t.mobile} *</Text>
+              <TextInput
+                style={s.input}
+                placeholder="9876543210"
+                keyboardType="phone-pad"
+                maxLength={10}
+                value={forgotForm.mobile}
+                onChangeText={v => setForgotForm(p => ({ ...p, mobile: v.replace(/\D/g, '') }))}
+                placeholderTextColor={C.textMuted}
+              />
+
+              <Text style={s.label}>{t.ownerName} *</Text>
+              <TextInput
+                style={s.input}
+                placeholder={lang === 'ta' ? 'உங்கள் பெயர் (சரியாக)' : 'Owner Name (Exact match)'}
+                value={forgotForm.ownerName}
+                onChangeText={v => setForgotForm(p => ({ ...p, ownerName: v }))}
+                autoCapitalize="words"
+                placeholderTextColor={C.textMuted}
+              />
+
+              <Text style={s.label}>{lang === 'ta' ? 'புதிய கடவுச்சொல்' : 'New Password'} *</Text>
+              <TextInput
+                style={s.input}
+                placeholder={lang === 'ta' ? 'குறைந்தது 4 எழுத்துகள்' : 'Minimum 4 characters'}
+                secureTextEntry
+                value={forgotForm.newPassword}
+                onChangeText={v => setForgotForm(p => ({ ...p, newPassword: v }))}
+                onSubmitEditing={handleForgot}
+                returnKeyType="go"
+                placeholderTextColor={C.textMuted}
+              />
             </>
           )}
 
@@ -238,7 +310,7 @@ export default function LoginScreen({ onLogin }) {
           {/* Submit button */}
           <TouchableOpacity
             style={[s.btn, loading && s.btnDisabled]}
-            onPress={mode === 'login' ? handleLogin : handleRegister}
+            onPress={mode === 'login' ? handleLogin : mode === 'register' ? handleRegister : handleForgot}
             disabled={loading}
             activeOpacity={0.8}
           >
@@ -246,19 +318,25 @@ export default function LoginScreen({ onLogin }) {
               <ActivityIndicator color="#fff" size="small" />
             ) : (
               <Text style={s.btnTxt}>
-                {mode === 'login' ? t.loginBtn : t.registerBtn}
+                {mode === 'login' ? t.loginBtn : mode === 'register' ? t.registerBtn : (lang === 'ta' ? 'கடவுச்சொல் மாற்று' : 'Update Password')}
               </Text>
             )}
           </TouchableOpacity>
 
           {/* Switch mode hint */}
-          <TouchableOpacity style={s.switchHint} onPress={() => switchMode(mode === 'login' ? 'register' : 'login')}>
-            <Text style={s.switchTxt}>
-              {mode === 'login'
-                ? (lang === 'ta' ? 'புதிய கணக்கு? பதிவு செய்யவும்' : 'New here? Create an account')
-                : (lang === 'ta' ? 'ஏற்கனவே கணக்கு உள்ளதா? உள்நுழையவும்' : 'Already have an account? Login')}
-            </Text>
-          </TouchableOpacity>
+          {mode !== 'forgot' ? (
+            <TouchableOpacity style={s.switchHint} onPress={() => switchMode(mode === 'login' ? 'register' : 'login')}>
+              <Text style={s.switchTxt}>
+                {mode === 'login'
+                  ? (lang === 'ta' ? 'புதிய கணக்கு? பதிவு செய்யவும்' : 'New here? Create an account')
+                  : (lang === 'ta' ? 'ஏற்கனவே கணக்கு உள்ளதா? உள்நுழையவும்' : 'Already have an account? Login')}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={s.switchHint} onPress={() => switchMode('login')}>
+              <Text style={s.switchTxt}>{lang === 'ta' ? 'உள்நுழைய திரும்பவும்' : 'Back to Login'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

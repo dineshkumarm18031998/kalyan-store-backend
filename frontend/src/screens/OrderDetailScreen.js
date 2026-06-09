@@ -106,7 +106,7 @@ export default function OrderDetailScreen({ route, navigation }) {
       setB(finalRes.data);
       setBookings(bookings.map(x => x.id === b.id ? finalRes.data : x));
     } catch (e) {
-      Alert.alert('Error', 'Failed to complete transaction');
+      Alert.alert('Error', e?.response?.data?.error || e.message || 'Failed to complete transaction');
     }
   };
 
