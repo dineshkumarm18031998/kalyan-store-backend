@@ -30,7 +30,7 @@ export default function ProductsScreen({ navigation }) {
   useEffect(() => { const unsub = navigation.addListener('focus', load); return unsub; }, [navigation]);
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
-  const getRented = (name) => bookings.filter(b => !b.returned).reduce((s2, b) => {
+  const getRented = (name) => bookings.filter(b => b.status === 'ACTIVE' && !b.isDeleted).reduce((s2, b) => {
     const it = (b.items || []).find(i => i.name === name); return s2 + (it ? it.qty : 0);
   }, 0);
 

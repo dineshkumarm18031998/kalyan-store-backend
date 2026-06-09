@@ -24,19 +24,17 @@ export default function DetailsScreen({ navigation }) {
 
   const filtered = useMemo(() => {
     let l = bookings.filter(b => !b.isDeleted);
-    if (flt === 'active') l = l.filter(b => !b.returned);
-    if (flt === 'returned') l = l.filter(b => b.returned);
-    if (flt === 'paid') l = l.filter(b => b.paid);
-    if (flt === 'unpaid') l = l.filter(b => !b.paid);
+    if (flt === 'active') l = l.filter(b => b.status === 'ACTIVE');
+    if (flt === 'returned') l = l.filter(b => b.status === 'RETURNED');
+    if (flt === 'closed') l = l.filter(b => b.status === 'CLOSED');
     if (srch) { const q = srch.toLowerCase(); l = l.filter(b => b.cName?.toLowerCase().includes(q) || b.cMob?.includes(q)); }
     return l;
   }, [bookings, flt, srch]);
 
   const getStatus = (b) => {
-    if (b.returned && b.paid) return { txt: t.retPaid, bg: C.greenLight, c: C.green };
-    if (b.returned && !b.paid) return { txt: t.retUnpaid, bg: C.redLight, c: C.red };
-    if (!b.returned && b.paid) return { txt: t.activePaid, bg: C.orangeLight, c: C.orange };
-    return { txt: t.activeUnpaid, bg: C.redLight, c: C.red };
+    if (b.status === 'CLOSED') return { txt: 'CLOSED & SETTLED', bg: '#E8F5E9', c: '#2E7D32' };
+    if (b.status === 'RETURNED') return { txt: 'RETURNED - UNPAID', bg: '#FFEBEE', c: '#C62828' };
+    return { txt: 'ACTIVE', bg: '#E3F2FD', c: '#1565C0' };
   };
 
   return (
@@ -46,7 +44,7 @@ export default function DetailsScreen({ navigation }) {
         <View style={s.filterCard}>
           <View style={s.searchRow}><Ionicons name="search" size={16} color={C.textMuted} /><TextInput style={s.searchInput} placeholder={t.search} value={srch} onChangeText={setSrch} placeholderTextColor={C.textMuted} /></View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-            {[['all', t.all], ['active', t.active], ['returned', t.returned], ['paid', t.paid], ['unpaid', t.unpaid]].map(([k, l]) => (
+            {[['all', t.all], ['active', 'Active'], ['returned', 'Returned'], ['closed', 'Closed']].map(([k, l]) => (
               <TouchableOpacity key={k} style={[s.chip, flt === k && s.chipOn]} onPress={() => setFlt(k)}><Text style={[s.chipTxt, flt === k && s.chipTxtOn]}>{l}</Text></TouchableOpacity>
             ))}
           </ScrollView>
@@ -59,7 +57,7 @@ export default function DetailsScreen({ navigation }) {
           return (
             <TouchableOpacity key={b.id} style={s.orderCard} onPress={() => navigation.navigate('OrderDetail', { bookingId: b.id })} activeOpacity={0.7}>
               <View style={s.ocTop}>
-                <View style={[s.ocAv, b.returned && { backgroundColor: C.blue }]}><Text style={s.ocAvTxt}>{b.cName?.[0]?.toUpperCase()}</Text></View>
+                <View style={[s.ocAv, b.status !== 'ACTIVE' && { backgroundColor: C.blue }]}><Text style={s.ocAvTxt}>{b.cName?.[0]?.toUpperCase()}</Text></View>
                 <View style={s.ocInfo}>
                   <Text style={s.ocName}>{b.cName}</Text>
                   <Text style={s.ocPhone}><Ionicons name="call-outline" size={9} /> {b.cMob}</Text>

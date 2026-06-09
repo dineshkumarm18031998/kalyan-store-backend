@@ -18,6 +18,30 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// Migration route
+router.get('/migrate-status', async (req, res) => {
+  try {
+    const bookings = await prisma.booking.findMany();
+    for (const b of bookings) {
+      if (b.status !== 'ACTIVE' && b.status !== 'RETURNED' && b.status !== 'CLOSED') {
+        let status = 'ACTIVE';
+        if (b.returned) {
+          const tr = (b.paidAmount || 0) + (b.additionalPayment || 0);
+          const tb = b.totalAmount || 0;
+          const diff = tr - tb;
+          if (diff === 0 && tb > 0) status = 'CLOSED';
+          else if (diff > 0 && b.advanceReturned) status = 'CLOSED';
+          else status = 'RETURNED';
+        }
+        await prisma.booking.update({ where: { id: b.id }, data: { status } });
+      }
+    }
+    res.json({ success: true, message: 'Migration completed' });
+  } catch (err) {
+    res.status(500).json({ error: 'Migration failed' });
+  }
+});
+
 // Get single booking
 router.get('/:id', auth, async (req, res) => {
   try {
@@ -55,7 +79,8 @@ router.post('/', auth, async (req, res) => {
         eventType,
         startDate: startDate || today,
         paidAmount: adv,
-        paid: false, // Initially false, will be calculated properly on bill generation
+        paid: false,
+        status: 'ACTIVE',
         isVip: isVip || false,
         generatedBy: generatedBy || null,
         storeId: req.storeId,
@@ -140,7 +165,8 @@ router.put('/:id', auth, async (req, res) => {
         ...(actualReturnDate !== undefined && { actualReturnDate }),
         ...(isVip !== undefined && { isVip }),
         ...(generatedBy !== undefined && { generatedBy }),
-        ...(advanceReturned !== undefined && { advanceReturned })
+        ...(advanceReturned !== undefined && { advanceReturned }),
+        ...(req.body.status !== undefined && { status: req.body.status })
       },
       include: { items: true, damages: true, payments: true }
     });

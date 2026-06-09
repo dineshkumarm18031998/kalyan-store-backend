@@ -83,14 +83,22 @@ export default function OrderDetailScreen({ route, navigation }) {
     } catch (e) { Alert.alert('Error', 'Failed to update'); }
   };
 
-  const toggleReturned = async (val) => {
-    await save({ returned: val, ...(val ? { actualReturnDate: rd } : { actualReturnDate: null }) });
+  const markAsReturned = async () => {
+    await save({ status: 'RETURNED', actualReturnDate: rd });
   };
 
   const processPayment = async (v) => {
     try {
       await addBookingPayment(b.id, { amount: v, remarks: 'Received via app' });
-      const res = await getBooking(b.id);
+      let res = await getBooking(b.id);
+      
+      const newAdv = res.data.paidAmount || 0;
+      const newAddl = res.data.additionalPayment || 0;
+      const newTotal = res.data.totalAmount || 0;
+      if (newTotal - (newAdv + newAddl) <= 0 && res.data.status === 'RETURNED') {
+        res = await updateBooking(b.id, { status: 'CLOSED' });
+      }
+      
       setB(res.data);
       setBookings(bookings.map(x => x.id === b.id ? res.data : x));
     } catch (e) {
@@ -242,32 +250,30 @@ export default function OrderDetailScreen({ route, navigation }) {
           ))}
         </View>
 
-        {/* Return Date & Billing */}
-        <View style={s.card}>
-          <Text style={s.secH}>📅 {t.retBill}</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <View style={{ flex: 1 }}><Text style={s.label}>{t.startDate}</Text><View style={s.dateBox}><Text style={s.dateTxt}>{fDate(b.startDate)}</Text></View></View>
-            <View style={{ flex: 1 }}><Text style={s.label}>{t.retDate} *</Text>
-              <TouchableOpacity style={s.dateBox} onPress={() => setShowPicker(true)}>
-                <Text style={s.dateTxt}>{fDate(rd)}</Text>
-              </TouchableOpacity>
-              {showPicker && (
-                <DateTimePicker value={new Date(rd)} mode="date" onChange={(e, d) => { setShowPicker(false); if (d) setRd(d.toISOString().split('T')[0]); }} />
-              )}
+        {/* Lifecycle Actions */}
+        {b.status === 'ACTIVE' && (
+          <View style={[s.card, { borderColor: C.blue, borderWidth: 2 }]}>
+            <Text style={s.secH}>📦 Return Process</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <View style={{ flex: 1 }}><Text style={s.label}>{t.retDate} *</Text>
+                <TouchableOpacity style={s.dateBox} onPress={() => setShowPicker(true)}>
+                  <Text style={s.dateTxt}>{fDate(rd)}</Text>
+                </TouchableOpacity>
+                {showPicker && (
+                  <DateTimePicker value={new Date(rd)} mode="date" onChange={(e, d) => { setShowPicker(false); if (d) setRd(d.toISOString().split('T')[0]); }} />
+                )}
+              </View>
             </View>
+            <View style={s.togRow}>
+              <Text style={s.togLabel}>{t.specRate}</Text>
+              <Switch value={vip} onValueChange={(val) => { setVip(val); if (val) setCdisc(''); }} trackColor={{ false: '#D7CCC8', true: C.green }} thumbColor="#fff" />
+            </View>
+            {!vip && <><Text style={s.label}>{t.custDisc}</Text><TextInput style={s.input} keyboardType="number-pad" placeholder="0" value={cdisc} onChangeText={setCdisc} /></>}
+            <TouchableOpacity style={[s.saveCalcBtn, { backgroundColor: C.blue }]} onPress={markAsReturned}>
+              <Text style={s.saveCalcTxt}>📦 Mark As Returned & Generate Bill</Text>
+            </TouchableOpacity>
           </View>
-          {days > 0 && <View style={s.dayChip}><Text style={s.dayChipTxt}>{days} {days > 1 ? t.days : t.day}</Text></View>}
-          
-          <View style={s.togRow}>
-            <Text style={s.togLabel}>{t.specRate}</Text>
-            <Switch value={vip} onValueChange={(val) => { setVip(val); if (val) setCdisc(''); }} trackColor={{ false: '#D7CCC8', true: C.green }} thumbColor="#fff" />
-          </View>
-          {!vip && <><Text style={s.label}>{t.custDisc}</Text><TextInput style={s.input} keyboardType="number-pad" placeholder="0" value={cdisc} onChangeText={setCdisc} /></>}
-          
-          <TouchableOpacity style={s.saveCalcBtn} onPress={() => save()}>
-            <Text style={s.saveCalcTxt}>💾 Save Calculation</Text>
-          </TouchableOpacity>
-        </View>
+        )}
 
         {/* Damages list */}
         {(b.damages || []).length > 0 && (
@@ -285,8 +291,8 @@ export default function OrderDetailScreen({ route, navigation }) {
           </View>
         )}
 
-        {/* Bill Summary */}
-        {days > 0 && (
+        {/* Bill Summary - Only shown if RETURNED or CLOSED */}
+        {(b.status === 'RETURNED' || b.status === 'CLOSED') && days > 0 && (
           <View style={[s.card, { borderWidth: 2, borderColor: C.primary }]}>
             <Text style={s.secH}>💰 {t.billSum}</Text>
             {(b.items || []).map((it, i) => (
@@ -309,10 +315,10 @@ export default function OrderDetailScreen({ route, navigation }) {
               </>
             )}
 
-            {adv > 0 && refDue > 0 && (
+            {b.status === 'RETURNED' && adv > 0 && refDue > 0 && (
               <View style={[s.togRow, { borderTopWidth: 1, borderTopColor: C.border, marginTop: 10, paddingTop: 10 }]}>
                 <Text style={s.togLabel}>Refund Returned to Customer</Text>
-                <Switch value={b.advanceReturned || false} onValueChange={(val) => save({ advanceReturned: val })} trackColor={{ false: '#D7CCC8', true: C.green }} thumbColor="#fff" />
+                <Switch value={b.advanceReturned || false} onValueChange={(val) => save({ advanceReturned: val, status: val ? 'CLOSED' : 'RETURNED' })} trackColor={{ false: '#D7CCC8', true: C.green }} thumbColor="#fff" />
               </View>
             )}
           </View>
@@ -334,47 +340,27 @@ export default function OrderDetailScreen({ route, navigation }) {
           </View>
         )}
 
-        {/* ═══ SIMPLIFIED STATUS TOGGLES ═══ */}
-        <View style={s.card}>
-          <Text style={s.secH}>📋 {t.actions}</Text>
-          
-          <View style={s.statusRow}>
-            <View style={s.statusLeft}>
-              <Text style={s.statusIcon}>📦</Text>
-              <View>
-                <Text style={s.statusLabel}>{t.items}</Text>
-                <Text style={[s.statusValue, { color: b.returned ? C.green : C.orange }]}>
-                  {b.returned ? t.returned + ' ✓' : t.active}
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={b.returned}
-              onValueChange={toggleReturned}
-              trackColor={{ false: '#FFE0B2', true: C.greenLight }}
-              thumbColor={b.returned ? C.green : C.orange}
-              style={{ transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }] }}
-            />
-          </View>
-
-          <View style={s.divider} />
-
-            <View style={s.statusRow}>
-              <View style={s.statusLeft}>
-                <Text style={s.statusIcon}>💰</Text>
-                <View>
-                  <Text style={s.statusLabel}>{t.paid}/{t.unpaid}</Text>
-                  <Text style={[s.statusValue, { color: isPaid ? C.green : C.red }]}>
-                    {isPaid ? t.paid + ' ✓' : t.unpaid}
-                  </Text>
+        {/* Action Buttons */}
+        {b.status === 'RETURNED' && (
+          <View style={s.card}>
+            <Text style={s.secH}>⚙️ Settlement Actions</Text>
+            
+            {balDue > 0 && (
+              <View style={s.statusRow}>
+                <View style={s.statusLeft}>
+                  <Text style={s.statusIcon}>⏳</Text>
+                  <View>
+                    <Text style={s.statusLabel}>Balance Due</Text>
+                    <Text style={[s.statusValue, { color: C.red }]}>{rupee(balDue)}</Text>
+                  </View>
                 </View>
+                <TouchableOpacity style={[s.saveCalcBtn, { marginTop: 0, padding: 8, backgroundColor: C.blue }]} onPress={handleUpdateAdv}>
+                  <Text style={s.saveCalcTxt}>Receive Payment</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity style={[s.saveCalcBtn, { marginTop: 0, padding: 8, backgroundColor: C.blue }]} onPress={handleUpdateAdv}>
-                <Text style={s.saveCalcTxt}>Receive Payment</Text>
-              </TouchableOpacity>
-            </View>
+            )}
 
-            {!isPaid && (
+            {balDue > 0 && (
               <View style={{ flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
                 <TouchableOpacity style={[s.reminderLink, { flex: 1, paddingLeft: 0 }]} onPress={sendReminder}>
                   <Ionicons name="notifications-outline" size={14} color={C.orange} />
@@ -383,13 +369,19 @@ export default function OrderDetailScreen({ route, navigation }) {
               </View>
             )}
 
-          <View style={s.divider} />
+            <View style={s.divider} />
+            <TouchableOpacity style={s.dmgLink} onPress={() => setShowDmg(true)}>
+              <Ionicons name="warning-outline" size={14} color={C.orange} />
+              <Text style={s.dmgLinkTxt}>{t.addDmg}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-          <TouchableOpacity style={s.dmgLink} onPress={() => setShowDmg(true)}>
-            <Ionicons name="warning-outline" size={14} color={C.orange} />
-            <Text style={s.dmgLinkTxt}>{t.addDmg}</Text>
-          </TouchableOpacity>
-        </View>
+        {b.status === 'CLOSED' && (
+          <View style={[s.card, { backgroundColor: '#E8F5E9', borderColor: '#2E7D32', borderWidth: 2, alignItems: 'center' }]}>
+            <Text style={{ fontSize: 20, color: '#2E7D32', fontWeight: '800' }}>✅ CLOSED & SETTLED</Text>
+          </View>
+        )}
 
         <View style={s.shareRow}>
           <TouchableOpacity style={[s.shareBtn, { backgroundColor: '#25D366' }]} onPress={shareWA}>

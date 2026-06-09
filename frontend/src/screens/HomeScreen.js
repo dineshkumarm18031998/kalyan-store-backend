@@ -46,40 +46,39 @@ export default function HomeScreen({ navigation }) {
   const d = todayISO();
   const validBookings = bookings.filter(b => !b.isDeleted);
   
-  // 1. Today's Rental
-  const todayCol = validBookings.filter(b => b.date === d).reduce((s, b) => s + (b.totalAmount || 0), 0);
+  // 1. Active Orders
+  const activeCount = validBookings.filter(b => b.status === 'ACTIVE').length;
   
-  // 2. Total Revenue
-  const totalRev = validBookings.reduce((s, b) => s + (b.totalAmount || 0), 0);
-  
-  // 3. Pending Amount (Strictly Balance Due)
-  const pending = validBookings.reduce((s, b) => {
-    const received = (b.paidAmount || 0) + (b.additionalPayment || 0);
-    const bal = (b.totalAmount || 0) - received;
-    return s + Math.max(0, bal);
-  }, 0);
-  
-  // 4. Active Orders
-  const activeCount = validBookings.filter(b => !b.returned).length;
-  
-  // 5. Available Stock
+  // 2. Available Stock
   const totalInv = products.reduce((s, p) => s + p.totalQty, 0);
-  const totalRented = validBookings.filter(b => !b.returned).reduce((s, b) => s + (b.items || []).reduce((ss, i) => ss + i.qty, 0), 0);
-  const availStock = totalInv - totalRented;
+  const activeRented = validBookings.filter(b => b.status === 'ACTIVE').reduce((s, b) => s + (b.items || []).reduce((ss, i) => ss + i.qty, 0), 0);
+  const availStock = totalInv - activeRented;
 
-  const getRented = (name) => validBookings.filter(b => !b.returned).reduce((s, b) => {
+  // 3. Pending Settlement
+  const pendingCount = validBookings.filter(b => b.status === 'RETURNED').length;
+  
+  // 4. This Month Revenue
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const monthRev = validBookings
+    .filter(b => b.status === 'CLOSED' && b.updatedAt && b.updatedAt.startsWith(currentMonth))
+    .reduce((s, b) => s + (b.totalAmount || 0), 0);
+    
+  // 5. Total Revenue
+  const totalRev = validBookings.filter(b => b.status === 'CLOSED').reduce((s, b) => s + (b.totalAmount || 0), 0);
+
+  const getRented = (name) => validBookings.filter(b => b.status === 'ACTIVE').reduce((s, b) => {
     const it = (b.items || []).find(i => i.name === name);
     return s + (it ? it.qty : 0);
   }, 0);
 
-  const active = validBookings.filter(b => !b.returned);
+  const active = validBookings.filter(b => b.status === 'ACTIVE');
 
   const stats = [
-    { l: t.todayCol, v: rupee(todayCol), c: C.teal, bg: C.tealLight, ic: '💰', f: 'today' },
-    { l: t.totalRev, v: rupee(totalRev), c: C.blue, bg: C.blueLight, ic: '📊', f: 'all' },
-    { l: t.pending, v: rupee(pending), c: C.red, bg: C.redLight, ic: '⏳', f: 'pending' },
-    { l: t.activeOrd, v: activeCount, c: C.blue, bg: C.blueLight, ic: '📦', f: 'active' },
-    { l: t.availStock, v: availStock, c: C.orange, bg: C.orangeLight, ic: '✅', f: 'stock' },
+    { l: "Active Orders", v: activeCount, c: C.blue, bg: C.blueLight, ic: '📦', f: 'active' },
+    { l: "Available Stock", v: availStock, c: C.orange, bg: C.orangeLight, ic: '✅', f: 'stock' },
+    { l: "Pending Settlement", v: pendingCount, c: C.red, bg: C.redLight, ic: '⏳', f: 'returned' },
+    { l: "This Month Rev", v: rupee(monthRev), c: C.teal, bg: C.tealLight, ic: '💰', f: 'month' },
+    { l: "Total Revenue", v: rupee(totalRev), c: C.primary, bg: C.primary + '20', ic: '📊', f: 'closed' },
   ];
 
   return (

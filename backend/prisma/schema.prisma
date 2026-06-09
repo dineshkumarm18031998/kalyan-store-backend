@@ -45,6 +45,7 @@ model Booking {
   date             String
   cName            String
   cMob             String
+  status           String   @default("ACTIVE")
   cAddr            String?
   notes            String?
   eventType        String?
