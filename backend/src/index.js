@@ -26,6 +26,17 @@ app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'Kalyan Store API Running 🏪' });
 });
 
+// Keep-alive endpoint for Cron-Job.org to prevent Railway sleeping
+app.get('/api/keep-alive', async (req, res) => {
+  try {
+    // Perform a tiny DB query to ensure PostgreSQL stays awake
+    await prisma.store.findFirst();
+    res.json({ status: 'awake', time: new Date().toISOString() });
+  } catch (error) {
+    res.status(500).json({ status: 'error', error: error.message });
+  }
+});
+
 // Force Database Sync endpoint
 app.get('/api/db-push', (req, res) => {
   try {

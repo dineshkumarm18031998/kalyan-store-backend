@@ -4,7 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Use environment variable or default to local IP for physical device / emulator
 // Update the IP address to your machine's local IP (e.g. 192.168.1.X) if testing on a physical device.
 // For Android emulator, 10.0.2.2 usually works.
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3000/api';
+// Fallback to localhost if env var fails, but default to production Railway URL
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://kalyan-store-backend-production-efa9.up.railway.app/api';
 
 const api = axios.create({
   baseURL: API_URL,
