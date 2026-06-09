@@ -81,7 +81,11 @@ export default function HomeScreen({ navigation }) {
   const availStock = totalInv - activeRented;
 
   // 3. Pending Settlement
-  const pendingCount = validBookings.filter(b => b.status === 'RETURNED').length;
+  const pendingAmt = validBookings.filter(b => b.status === 'RETURNED').reduce((sum, b) => {
+    const paid = (b.paidAmount || 0) + (b.additionalPayment || 0);
+    const total = b.totalAmount || 0;
+    return sum + Math.max(0, total - paid);
+  }, 0);
 
   // Total Revenue
   const totalRev = validBookings.filter(b => b.status === 'CLOSED').reduce((s, b) => s + (b.totalAmount || 0), 0);
@@ -108,7 +112,7 @@ export default function HomeScreen({ navigation }) {
     { l: t.todayCol, v: rupee(todayRev), c: '#00E676', bg: '#E8F5E9', ic: '💸', f: 'month' },
     { l: t.activeOrd, v: activeCount, c: '#0288D1', bg: '#E1F5FE', ic: '📦', f: 'active' },
     { l: t.availStock, v: availStock, c: '#E65100', bg: '#FFF3E0', ic: '✅', f: 'stock' },
-    { l: t.pending, v: pendingCount, c: '#C62828', bg: '#FFEBEE', ic: '⏳', f: 'returned' },
+    { l: t.pending, v: rupee(pendingAmt), c: '#C62828', bg: '#FFEBEE', ic: '⏳', f: 'returned' },
     { l: t.dmgRev, v: rupee(dmgRev), c: '#8E24AA', bg: '#F3E5F5', ic: '⚠️', f: 'closed' },
   ];
 
