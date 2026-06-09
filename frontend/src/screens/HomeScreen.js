@@ -58,6 +58,9 @@ export default function HomeScreen({ navigation }) {
 
   // 3. Pending Settlement
   const pendingCount = validBookings.filter(b => b.status === 'RETURNED').length;
+
+  // Total Revenue
+  const totalRev = validBookings.filter(b => b.status === 'CLOSED').reduce((s, b) => s + (b.totalAmount || 0), 0);
   
   // Today Revenue
   const todayDate = new Date().toISOString().split('T')[0];
