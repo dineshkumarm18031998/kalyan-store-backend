@@ -21,6 +21,8 @@ export default function OrderDetailScreen({ route, navigation }) {
   const [vip, setVip] = useState(false);
   const [cdisc, setCdisc] = useState('');
   const [showDmg, setShowDmg] = useState(false);
+  const [showPay, setShowPay] = useState(false);
+  const [payAmount, setPayAmount] = useState('');
   const [dmgForm, setDmgForm] = useState({ product: '', qty: '', rate: '' });
   const [loading, setLoading] = useState(true);
   const [sig, setSig] = useState(null);
@@ -107,36 +109,31 @@ export default function OrderDetailScreen({ route, navigation }) {
   };
 
   const handleUpdateAdv = () => {
-    Alert.prompt(
-      "Receive Payment",
-      "Enter amount received:",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Save", onPress: (val) => {
-            const v = parseFloat(val);
-            if (isNaN(v) || v <= 0) {
-              setTimeout(() => Alert.alert("Error", "Please enter a valid payment amount."), 500);
-              return;
-            }
-            if (v > balDue) {
-              setTimeout(() => Alert.alert(
-                "Warning",
-                "This amount exceeds the pending balance and will create a refund amount.",
-                [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Confirm", onPress: () => processPayment(v) }
-                ]
-              ), 500);
-            } else {
-              processPayment(v);
-            }
-          }
-        }
-      ],
-      "plain-text",
-      "",
-      "number-pad"
-    );
+    setShowPay(true);
+    setPayAmount('');
+  };
+
+  const submitPayment = () => {
+    const v = parseFloat(payAmount);
+    if (isNaN(v) || v <= 0) {
+      Alert.alert("Error", "Please enter a valid payment amount.");
+      return;
+    }
+    
+    setShowPay(false);
+
+    if (v > balDue) {
+      setTimeout(() => Alert.alert(
+        "Warning",
+        "This amount exceeds the pending balance and will create a refund amount.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Confirm", onPress: () => processPayment(v) }
+        ]
+      ), 500);
+    } else {
+      processPayment(v);
+    }
   };
 
   const handleAddDmg = async () => {
@@ -415,6 +412,30 @@ export default function OrderDetailScreen({ route, navigation }) {
           {dmgForm.qty && dmgForm.rate ? <View style={s.dmgPreview}><Text style={{ color: C.primary, fontWeight: '700' }}>{t.dmgAmt}: {rupee((+dmgForm.qty) * (+dmgForm.rate))}</Text></View> : null}
           <TouchableOpacity style={[s.saveBtn, { backgroundColor: C.red }]} onPress={handleAddDmg}><Text style={s.saveBtnTxt}>+ {t.addDmg}</Text></TouchableOpacity>
           <TouchableOpacity style={{ padding: 12, alignItems: 'center' }} onPress={() => setShowDmg(false)}><Text style={{ color: C.textMuted }}>{t.cancel}</Text></TouchableOpacity>
+        </View></View>
+      </Modal>
+
+      {/* Payment Modal */}
+      <Modal visible={showPay} transparent animationType="slide">
+        <View style={s.modalBg}><View style={s.sheet}>
+          <View style={s.shHandle} />
+          <Text style={s.shTitle}>💰 Receive Payment</Text>
+          <Text style={s.label}>Enter amount received:</Text>
+          <TextInput 
+            style={[s.input, { fontSize: 24, paddingVertical: 12, textAlign: 'center', fontWeight: 'bold' }]} 
+            keyboardType="number-pad" 
+            placeholder="0" 
+            value={payAmount} 
+            onChangeText={setPayAmount} 
+            placeholderTextColor={C.textMuted}
+            autoFocus
+          />
+          <TouchableOpacity style={[s.saveBtn, { backgroundColor: C.blue, marginTop: 16 }]} onPress={submitPayment}>
+            <Text style={s.saveBtnTxt}>Save Payment</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ padding: 12, alignItems: 'center' }} onPress={() => setShowPay(false)}>
+            <Text style={{ color: C.textMuted }}>{t.cancel}</Text>
+          </TouchableOpacity>
         </View></View>
       </Modal>
 
