@@ -331,7 +331,7 @@ export default function OrderDetailScreen({ route, navigation }) {
                 </View>
               </View>
               <TouchableOpacity style={[s.saveCalcBtn, { marginTop: 0, padding: 8, backgroundColor: C.blue }]} onPress={handleUpdateAdv}>
-                <Text style={s.saveCalcTxt}>Update Payment</Text>
+                <Text style={s.saveCalcTxt}>Receive Payment</Text>
               </TouchableOpacity>
             </View>
 
