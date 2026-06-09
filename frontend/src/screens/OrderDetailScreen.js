@@ -267,18 +267,22 @@ export default function OrderDetailScreen({ route, navigation }) {
         {/* Items */}
         <View style={s.card}>
           <Text style={s.secH}>📦 {t.items}</Text>
-          {(b.items || []).map((it, i) => (
-            <View key={i} style={s.itemRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                {it.image ? <Image source={{ uri: it.image }} style={s.itemImg} /> : <View style={s.itemNoImg}><Ionicons name="cube-outline" size={14} color={C.textMuted} /></View>}
-                <View>
-                  <Text style={s.itemName}>{it.name}</Text>
-                  <Text style={s.itemCalc}>{it.qty} × {rupee(it.rate)}{days > 0 ? ` × ${days}d` : t.perDay}</Text>
+          {(b.items || []).map((it, i) => {
+              const p = products.find(x => x.name === it.name);
+              const img = it.image || p?.image;
+              return (
+              <View key={i} style={s.itemRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {img ? <Image source={{ uri: img }} style={s.itemImg} /> : <View style={s.itemNoImg}><Ionicons name="cube-outline" size={14} color={C.textMuted} /></View>}
+                  <View>
+                    <Text style={s.itemName}>{it.name}</Text>
+                    <Text style={s.itemCalc}>{it.qty} × {rupee(it.rate)}{days > 0 ? ` × ${days}d` : t.perDay}</Text>
+                  </View>
                 </View>
+                <Text style={s.itemAmt}>{days > 0 ? rupee(it.qty * it.rate * days) : `${rupee(it.qty * it.rate)}${t.perDay}`}</Text>
               </View>
-              <Text style={s.itemAmt}>{days > 0 ? rupee(it.qty * it.rate * days) : `${rupee(it.qty * it.rate)}${t.perDay}`}</Text>
-            </View>
-          ))}
+              );
+          })}
         </View>
 
         {/* Lifecycle Actions */}

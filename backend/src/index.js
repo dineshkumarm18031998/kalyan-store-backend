@@ -12,6 +12,11 @@ const prisma = require('./prisma');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Prevent BigInt serialization crashes in Express
+BigInt.prototype.toJSON = function () {
+  return this.toString();
+};
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));

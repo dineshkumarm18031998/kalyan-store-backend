@@ -61,7 +61,7 @@ export default function OrderScreen({ navigation }) {
       const res = await createBooking({
         cName: cust.name, cMob: cust.mob, cAddr: cust.addr, notes: cust.notes,
         eventType: cust.ev, startDate: sd, isVip, generatedBy, paidAmount: parseFloat(cust.paidAmount) || 0,
-        items: items.map(i => ({ name: i.name, qty: i.qty, rate: i.rate, image: i.image }))
+        items: items.map(i => ({ name: i.name, qty: i.qty, rate: i.rate }))
       });
       setDone(res.data);
     } catch (e) { Alert.alert('Error', e?.response?.data?.error || e.message || 'Failed to create booking'); }

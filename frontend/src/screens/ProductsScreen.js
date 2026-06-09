@@ -14,7 +14,7 @@ export default function ProductsScreen({ navigation }) {
   
   const [modal, setModal] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({ name: '', totalQty: '', rentPerDay: '', category: '', image: null });
+  const [form, setForm] = useState({ name: '', totalQty: '', rentPerDay: '', category: '', image: null, imgChanged: false });
   const [refreshing, setRefreshing] = useState(false);
   const [catFilter, setCatFilter] = useState('All');
   const u = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -36,22 +36,25 @@ export default function ProductsScreen({ navigation }) {
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.5, base64: true });
-    if (!result.canceled) u('image', `data:image/jpeg;base64,${result.assets[0].base64}`);
+    if (!result.canceled) { u('image', `data:image/jpeg;base64,${result.assets[0].base64}`); u('imgChanged', true); }
   };
 
   const save = async () => {
     if (!form.name || !form.totalQty || !form.rentPerDay) return Alert.alert('Error', t.allReq);
     try {
+      const payload = { ...form };
+      if (!payload.imgChanged) delete payload.image;
+      delete payload.imgChanged;
       if (editId) {
-        const res = await updateProduct(editId, form);
+        const res = await updateProduct(editId, payload);
         setProducts(products.map(p => p.id === editId ? res.data : p));
       } else {
-        const res = await createProduct(form);
+        const res = await createProduct(payload);
         setProducts([res.data, ...products]);
       }
       setModal(false); setEditId(null);
-      setForm({ name: '', totalQty: '', rentPerDay: '', category: '', image: null });
-    } catch (e) { Alert.alert('Error', 'Failed to save'); }
+      setForm({ name: '', totalQty: '', rentPerDay: '', category: '', image: null, imgChanged: false });
+    } catch (e) { Alert.alert('Error', e?.response?.data?.error || e.message || 'Failed to save'); }
   };
 
   const del = (pid) => Alert.alert(t.del, t.del + '?', [
@@ -63,7 +66,7 @@ export default function ProductsScreen({ navigation }) {
 
   const edit = (p) => {
     setEditId(p.id);
-    setForm({ name: p.name, totalQty: String(p.totalQty), rentPerDay: String(p.rentPerDay), category: p.category || '', image: p.image });
+    setForm({ name: p.name, totalQty: String(p.totalQty), rentPerDay: String(p.rentPerDay), category: p.category || '', image: p.image, imgChanged: false });
     setModal(true);
   };
 
@@ -122,7 +125,7 @@ export default function ProductsScreen({ navigation }) {
         )}
         <View style={{ height: 80 }} />
       </ScrollView>
-      <TouchableOpacity style={s.fab} onPress={() => { setEditId(null); setForm({ name: '', totalQty: '', rentPerDay: '', category: '', image: null }); setModal(true); }}>
+      <TouchableOpacity style={s.fab} onPress={() => { setEditId(null); setForm({ name: '', totalQty: '', rentPerDay: '', category: '', image: null, imgChanged: false }); setModal(true); }}>
         <Ionicons name="add" size={32} color="#fff" />
       </TouchableOpacity>
       <Modal visible={modal} animationType="slide" transparent>
