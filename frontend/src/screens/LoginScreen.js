@@ -151,19 +151,22 @@ export default function LoginScreen({ onLogin }) {
         <View style={s.card}>
 
           {/* Login / Register tabs */}
-          <View style={s.tabs}>
-            <TouchableOpacity style={[s.tab, mode === 'login' && s.tabOn]} onPress={() => switchMode('login')}>
-              <Text style={[s.tabTxt, mode === 'login' && s.tabTxtOn]}>{t.loginTab}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[s.tab, mode === 'register' && s.tabOn]} onPress={() => switchMode('register')}>
-              <Text style={[s.tabTxt, mode === 'register' && s.tabTxtOn]}>{t.registerTab}</Text>
-            </TouchableOpacity>
-            {mode === 'forgot' && (
+          {mode !== 'forgot' ? (
+            <View style={s.tabs}>
+              <TouchableOpacity style={[s.tab, mode === 'login' && s.tabOn]} onPress={() => switchMode('login')}>
+                <Text style={[s.tabTxt, mode === 'login' && s.tabTxtOn]}>{t.login}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.tab, mode === 'register' && s.tabOn]} onPress={() => switchMode('register')}>
+                <Text style={[s.tabTxt, mode === 'register' && s.tabTxtOn]}>{t.register}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={s.tabs}>
               <TouchableOpacity style={[s.tab, s.tabOn]} activeOpacity={1}>
                 <Text style={[s.tabTxt, s.tabTxtOn]}>{lang === 'ta' ? 'கடவுச்சொல் மீட்டமை' : 'Reset Password'}</Text>
               </TouchableOpacity>
-            )}
-          </View>
+            </View>
+          )}
 
           {/* Language selector — always visible */}
           <Text style={s.label}>{t.lang}</Text>
