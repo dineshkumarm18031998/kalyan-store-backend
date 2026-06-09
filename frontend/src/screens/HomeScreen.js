@@ -1,5 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Image, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Image, Alert, Dimensions, FlatList } from 'react-native';
+
+const { width } = Dimensions.get('window');
 import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../utils/AppContext';
 import { rupee, fDateLong, todayISO } from '../utils/theme';
@@ -57,14 +59,16 @@ export default function HomeScreen({ navigation }) {
   // 3. Pending Settlement
   const pendingCount = validBookings.filter(b => b.status === 'RETURNED').length;
   
-  // 4. This Month Revenue
-  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-  const monthRev = validBookings
-    .filter(b => b.status === 'CLOSED' && b.updatedAt && b.updatedAt.startsWith(currentMonth))
+  // Today Revenue
+  const todayDate = new Date().toISOString().split('T')[0];
+  const todayRev = validBookings
+    .filter(b => b.status === 'CLOSED' && b.updatedAt && b.updatedAt.startsWith(todayDate))
     .reduce((s, b) => s + (b.totalAmount || 0), 0);
-    
-  // 5. Total Revenue
-  const totalRev = validBookings.filter(b => b.status === 'CLOSED').reduce((s, b) => s + (b.totalAmount || 0), 0);
+
+  // Damaged Revenue
+  const dmgRev = validBookings
+    .filter(b => b.status === 'CLOSED')
+    .reduce((s, b) => s + (b.damages || []).reduce((ss, d) => ss + (d.qty * d.rate), 0), 0);
 
   const getRented = (name) => validBookings.filter(b => b.status === 'ACTIVE').reduce((s, b) => {
     const it = (b.items || []).find(i => i.name === name);
@@ -74,9 +78,11 @@ export default function HomeScreen({ navigation }) {
   const active = validBookings.filter(b => b.status === 'ACTIVE');
 
   const stats = [
+    { l: "Today's Rev", v: rupee(todayRev), c: '#00E676', bg: '#E8F5E9', ic: '💸', f: 'month' },
     { l: "Active Orders", v: activeCount, c: '#0288D1', bg: '#E1F5FE', ic: '📦', f: 'active' },
     { l: "Available Stock", v: availStock, c: '#E65100', bg: '#FFF3E0', ic: '✅', f: 'stock' },
     { l: "Pending Settles", v: pendingCount, c: '#C62828', bg: '#FFEBEE', ic: '⏳', f: 'returned' },
+    { l: "Damaged Rev", v: rupee(dmgRev), c: '#8E24AA', bg: '#F3E5F5', ic: '⚠️', f: 'closed' },
   ];
 
   return (
@@ -105,11 +111,8 @@ export default function HomeScreen({ navigation }) {
         <Text style={s.date}>{fDateLong(d)}</Text>
 
         <View style={s.heroCard}>
-          <Text style={s.heroSubtitle}>THIS MONTH REVENUE</Text>
-          <Text style={s.heroTitle}>{rupee(monthRev)}</Text>
-          <View style={s.heroFooter}>
-            <Text style={s.heroFooterTxt}>Total All-Time: {rupee(totalRev)}</Text>
-          </View>
+          <Text style={s.heroSubtitle}>TOTAL REVENUE</Text>
+          <Text style={s.heroTitle}>{rupee(totalRev)}</Text>
         </View>
 
         {/* 3D Stats Grid */}
@@ -147,24 +150,33 @@ export default function HomeScreen({ navigation }) {
                 ))}
               </ScrollView>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.stockGrid}>
-                {filtered.map(p => {
-                  const r = getRented(p.name), a = p.totalQty - r;
-                  const pct = p.totalQty > 0 ? (a / p.totalQty) * 100 : 0;
-                  const bc = pct > 50 ? C.teal : pct > 20 ? C.yellow : C.red;
-                  return (
-                    <View key={p.id} style={s.stockCard}>
-                      <View style={s.stockImg}>
-                        {p.image ? <Image source={{ uri: p.image }} style={s.stockImgI} /> : <Ionicons name="cube-outline" size={28} color="#ccc" />}
-                      </View>
-                      <Text style={s.stockName} numberOfLines={1}>{p.name}</Text>
-                      <View style={s.stockBar}><View style={[s.stockFill, { width: `${pct}%`, backgroundColor: bc }]} /></View>
-                      <Text style={s.stockNums}><Text style={[s.stockFree, { color: bc }]}>{a}</Text> / {p.totalQty}</Text>
-                      <Text style={s.stockRate}>{rupee(p.rentPerDay)}{t.perDay}</Text>
-                    </View>
-                  );
-                })}
-              </ScrollView>
+              <FlatList
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                data={Array.from({ length: Math.ceil(filtered.length / 4) }, (v, i) => filtered.slice(i * 4, i * 4 + 4))}
+                keyExtractor={(_, i) => String(i)}
+                renderItem={({ item }) => (
+                  <View style={{ width: width - 24, flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                    {item.map(p => {
+                      const r = getRented(p.name), a = p.totalQty - r;
+                      const pct = p.totalQty > 0 ? (a / p.totalQty) * 100 : 0;
+                      const bc = pct > 50 ? C.teal : pct > 20 ? C.yellow : C.red;
+                      return (
+                        <View key={p.id} style={s.stockCard}>
+                          <View style={s.stockImg}>
+                            {p.image ? <Image source={{ uri: p.image }} style={s.stockImgI} /> : <Ionicons name="cube-outline" size={28} color="#ccc" />}
+                          </View>
+                          <Text style={s.stockName} numberOfLines={1}>{p.name}</Text>
+                          <View style={s.stockBar}><View style={[s.stockFill, { width: `${pct}%`, backgroundColor: bc }]} /></View>
+                          <Text style={s.stockNums}><Text style={[s.stockFree, { color: bc }]}>{a}</Text> / {p.totalQty}</Text>
+                          <Text style={s.stockRate}>{rupee(p.rentPerDay)}{t.perDay}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              />
             </View>
           );
         })()}
@@ -258,7 +270,7 @@ const useStyles = (C) => StyleSheet.create({
   catTxtOn: { color: '#fff' },
   stockGrid: { flexDirection: 'row', gap: 12 },
   stockCard: { 
-    width: 140, 
+    width: '47%', 
     backgroundColor: '#fff', 
     borderRadius: 16, 
     padding: 12, 
@@ -268,8 +280,7 @@ const useStyles = (C) => StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
     alignItems: 'center',
-    marginBottom: 8,
-    marginLeft: 4
+    marginBottom: 12,
   },
   stockImg: { width: 60, height: 60, borderRadius: 16, backgroundColor: '#f8f9fa', alignItems: 'center', justifyContent: 'center', marginBottom: 8, overflow: 'hidden' },
   stockImgI: { width: 60, height: 60, borderRadius: 16 },
